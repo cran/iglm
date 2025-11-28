@@ -1,7 +1,7 @@
 Package: iglm
 Type: Package
 Title: Regression under Network Interference
-Version: 1.0
+Version: 1.1
 Date: 2025-11-09
 Authors@R: c(
     person(given = "Cornelius", family = "Fritz", role = c("aut", "cre"), email = "corneliusfritz2010@gmail.com"), 
@@ -18,9 +18,9 @@ Encoding: UTF-8
 VignetteBuilder: knitr
 LazyData: true
 NeedsCompilation: yes
-Packaged: 2025-11-21 13:46:59 UTC; corneliusfritz
+Packaged: 2025-11-26 18:03:48 UTC; corneliusfritz
 Author: Cornelius Fritz [aut, cre],
   Michael Schweinberger [aut]
 Maintainer: Cornelius Fritz <corneliusfritz2010@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-11-25 20:52:16 UTC
+Date/Publication: 2025-11-28 13:00:23 UTC

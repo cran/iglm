@@ -1,7 +1,7 @@
 #' @docType class
 #' @title An R6 class for Network GLM (Generalized Linear Model) Objects
 #' @description
-#' The `iglm_object` class encapsulates all components required to define,
+#' The `iglm.object` class encapsulates all components required to define,
 #' estimate, and simulate from a network generalized linear model. This includes
 #' the model formula, coefficients, the underlying network and attribute data
 #' (via a `iglm.data` object), sampler controls, estimation controls, and storage
@@ -18,7 +18,7 @@
 #' @importFrom stats as.formula pnorm terms quantile update printCoefmat na.omit sd
 #' @importFrom utils modifyList
 #' @export
-iglm_object_generator <- R6::R6Class("iglm_object",
+iglm.object.generator <- R6::R6Class("iglm.object",
                                      private = list(
                                        .formula = NULL,
                                        .iglm.data = NULL,
@@ -55,26 +55,26 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        },
                                        #' @description
                                        #' Internal validation method. Checks the consistency and validity of
-                                       #' all components of the `iglm_object`. Stops with an error if any
+                                       #' all components of the `iglm.object`. Stops with an error if any
                                        #' check fails.
                                        .validate = function() {
                                          # browser()
                                          if(is.null(private$.formula) || !inherits(private$.formula, "formula")) {
-                                           stop("Invalid formula in iglm_object.", call. = FALSE)
+                                           stop("Invalid formula in iglm.object.", call. = FALSE)
                                          }
                                          if(is.null(private$.coef) || !is.numeric(private$.coef)) {
-                                           stop("Invalid coef in iglm_object.", call. = FALSE)
+                                           stop("Invalid coef in iglm.object.", call. = FALSE)
                                          }
                                          if(length(private$.coef) != length(private$.preprocess$coef_names)) {
                                            stop("Length of coef does not match number of terms in formula.", call. = FALSE)
                                          }
-                                         if(!inherits(private$.sampler, "sampler_iglm")) {
-                                           stop("Invalid sampler in iglm_object.", call. = FALSE)
+                                         if(!inherits(private$.sampler, "sampler.iglm")) {
+                                           stop("Invalid sampler in iglm.object.", call. = FALSE)
                                          }
                                          
                                          if(!is.null(private$.coef_popularity)){
                                            if(!is.numeric(private$.coef_popularity)) {
-                                             stop("Invalid coef_popularity in iglm_object.", call. = FALSE)
+                                             stop("Invalid coef_popularity in iglm.object.", call. = FALSE)
                                            }
                                            expected_length <- private$.iglm.data$n_actor +
                                              private$.iglm.data$directed*private$.iglm.data$n_actor
@@ -87,14 +87,14 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                          }
                                          if(!is.null(private$.results)){
                                            if(!inherits(private$.results, "results")) {
-                                             stop("Invalid results object in iglm_object.", call. = FALSE)
+                                             stop("Invalid results object in iglm.object.", call. = FALSE)
                                            }
                                          }
                                          if(!inherits(private$.iglm.data, "iglm.data")) {
-                                           stop("Invalid iglm.data object in iglm_object.", call. = FALSE)
+                                           stop("Invalid iglm.data object in iglm.object.", call. = FALSE)
                                          }
                                          if(!inherits(private$.control, "control.iglm")) {
-                                           stop("Invalid control object in iglm_object.", call. = FALSE)
+                                           stop("Invalid control object in iglm.object.", call. = FALSE)
                                          }
                                          
                                          if(is.null(private$.sufficient_statistics)){
@@ -104,25 +104,25 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                      ),
                                      public = list(
                                        #' @description
-                                       #' Creates a new `iglm_object`. This involves parsing the formula,
+                                       #' Creates a new `iglm.object`. This involves parsing the formula,
                                        #' linking the data object, initializing coefficients, setting up sampler
                                        #' and control objects, calculating initial statistics, and validating.
                                        #' @param formula A model `formula` object. The left-hand side should be the
                                        #'   name of a \code{\link{iglm.data}} object available in the calling environment. 
-                                       #'   See \code{\link{model_terms}} for details on specifying the right-hand side terms.
+                                       #'   See \code{\link{model.terms}} for details on specifying the right-hand side terms.
                                        #' @param coef A numeric vector of initial coefficients for the terms in
                                        #'   the formula (excluding popularity). If `NULL`, coefficients are
                                        #'   initialized to zero.
                                        #' @param coef_popularity An optional numeric vector of initial popularity
                                        #'   coefficients. Should be `NULL` if the formula does
                                        #'   not include popularity terms.
-                                       #' @param sampler A \code{\link{sampler_iglm}} object specifying the MCMC sampler
+                                       #' @param sampler A \code{\link{sampler.iglm}} object specifying the MCMC sampler
                                        #'   settings. If `NULL`, default settings are used. 
                                        #' @param control A \code{\link{control.iglm}} object specifying estimation control
                                        #'   parameters. If `NULL`, default settings are used.
                                        #' @param file (character or `NULL`) If provided, loads the sampler state from
                                        #'  the specified .rds file instead of initializing from parameters.
-                                       #' @return A new `iglm_object`.
+                                       #' @return A new `iglm.object`.
                                        initialize = function(formula = NULL, coef = NULL, 
                                                              coef_popularity = NULL, 
                                                              sampler = NULL, 
@@ -216,8 +216,8 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                            if (is.null(sampler)) {
                                              private$.sampler <- sampler.iglm() 
                                            } else {
-                                             if (!inherits(sampler, "sampler_iglm")) {
-                                               stop("`sampler` must be a 'sampler_iglm' object created with sampler.iglm().")
+                                             if (!inherits(sampler, "sampler.iglm")) {
+                                               stop("`sampler` must be a 'sampler.iglm' object created with sampler.iglm().")
                                              }
                                              private$.sampler <- sampler
                                            }
@@ -231,17 +231,22 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        #' on the observed network and comparing their distribution to the
                                        #' distribution obtained from simulated networks based on the current
                                        #' model parameters. Requires simulations to have been run first (via
-                                       #'  \code{iglm_object$simulate} or \code{iglm_object_generator$estimate}).
+                                       #'  \code{iglm.object$simulate} or \code{iglm.object_generator$estimate}).
                                        #'
                                        #' @param formula A formula specifying the network statistics to assess
                                        #'   (e.g., `~ degree_distribution() + geodesic_distances_distribution()`).
                                        #'   The terms should correspond to methods available in the \code{\link{iglm.data}} 
                                        #'   object that end with `distributions`. 
                                        #'   If the term mcmc_diagnostics is included, MCMC diagnostics will also be computed.
+                                       #' @param plot (logical) If `TRUE`, generates plots comparing observed and simulated statistics. Default is `TRUE`.
                                        #' @return An object of class `iglm_model_assessment` containing the
                                        #'   observed statistics and the distribution of simulated statistics.
                                        #'   The result is also stored internally.
-                                       model_assessment = function(formula){
+                                       model_assessment = function(formula, plot = TRUE){
+                                         if(!private$.results$estimated){
+                                           stop("Model has not been estimated yet, assessing the fit thus makes little sense.", call. = FALSE)
+                                         }
+                                         
                                          if(length(private$.results$samples) ==0){
                                            self$simulate()
                                          }
@@ -275,6 +280,13 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                            }
                                          })
                                          names(ranges_tmp) <- rep("value_range", length(names_tmp))
+                                         # for(i in 1:length(private$.results$samples)){
+                                         #   cat(i," \n")
+                                         #   eval_change(formula = formula,object = private$.results$samples[[i]], additional_args = ranges_tmp)  
+                                         # }
+                                         # debugonce(private$.results$samples[[155]]$spillover_degree_distribution)
+                                         # private$.results$samples[[155]]$spillover_degree_distribution()
+                                         # 
                                          simulated <- lapply(private$.results$samples, 
                                                              function(object, info_tmp, names_tmp) {
                                                                res <- eval_change(formula = formula,object = object, additional_args = ranges_tmp)
@@ -282,6 +294,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                                                return(res)
                                                              }, names_tmp = names_tmp, info_tmp = info_tmp
                                          )
+                                         
                                          
                                          res <- list(observed = observed, 
                                                      simulated = simulated, 
@@ -291,10 +304,13 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                                      sufficient_statistics = sufficient_statistics)
                                          class(res) <- "iglm_model_assessment"
                                          private$.results$set_model_assessment(res)
+                                         if(plot){
+                                           private$.results$plot(model_assessment = TRUE)
+                                         }
                                          invisible(res)
                                        }, 
                                        #' @description
-                                       #' Print a summary of the `iglm_object`. If estimation results are
+                                       #' Print a summary of the `iglm.object`. If estimation results are
                                        #' available, they are printed in a standard coefficient table format.
                                        #' @param digits (integer) Number of digits for rounding numeric output.
                                        #' @param ... Additional arguments (not used).
@@ -348,9 +364,9 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                          private$.results$plot(stats = stats, trace = trace,model_assessment =  model_assessment)
                                        },
                                        #' @description
-                                       #' Gathers all components of the \code{\link{iglm_object}} into a single list for
+                                       #' Gathers all components of the \code{\link{iglm.object}} into a single list for
                                        #' easy saving or inspection.
-                                       #' @return A list containing all key components of the \code{\link{iglm_object}}.
+                                       #' @return A list containing all key components of the \code{\link{iglm.object}}.
                                        #'   This includes the formula, coefficients, sampler, control settings,
                                        #'   preprocessing info, time taken for estimation, count statistics,
                                        #'   results, and the underlying \code{\link{iglm.data}} data object.
@@ -367,7 +383,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                               iglm.data = private$.iglm.data$gather())
                                        }, 
                                        #' @description
-                                       #' Save the \code{\link{iglm_object}} to a file in RDS format.
+                                       #' Save the \code{\link{iglm.object}} to a file in RDS format.
                                        #' @param file (character) File path to save the object to.
                                        #' @return Invisibly returns `NULL`.
                                        save = function(file = NULL) {
@@ -584,8 +600,10 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        #' @return A list containing the simulated networks (`samples`, as a
                                        #'   `iglm.data.list` if `only_stats = FALSE`) and/or their summary
                                        #'   statistics (`stats`), invisibly.
+                                       #' @importFrom grDevices col2rgb rgb
                                        simulate = function (nsim = 1, only_stats = FALSE, display_progress=TRUE,
                                                             offset_nonoverlap= 0) {
+                                         # debugonce(simulate_iglm)
                                          info <- simulate_iglm(formula = private$.formula, coef = private$.coef, 
                                                                coef_popularity = private$.coef_popularity,
                                                                sampler = private$.sampler, 
@@ -593,7 +611,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                                                fix_x = private$.control$fix_x,
                                                                display_progress = display_progress, 
                                                                offset_nonoverlap = offset_nonoverlap, 
-                                                               cluster = private$.sampler$cluster)
+                                                               cluster = private$.control$cluster)
                                          
                                          private$.results$update(samples = info$samples,
                                                                  stats = info$stats,
@@ -601,6 +619,187 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                          private$.validate()
                                          invisible(private$.results$simulation)
                                        }, 
+                                       #' @description
+                                       #' Calculates predicted values for the nodal covariates (\code{x}), the outcome variable (\code{y}), 
+                                       #' and the network structure (\code{z}). The function supports two prediction modes: 
+                                       #' \emph{marginal} (based on Monte Carlo integration over simulated samples) and 
+                                       #' \emph{conditional} (based on the analytical linear predictor and point estimates).
+                                       #'
+                                       #' @param variant A character string specifying the type of prediction to generate. 
+                                       #'   Must be one of:
+                                       #'   \itemize{
+                                       #'     \item \code{"marginal"}: Computes predictions by aggregating over the MCMC samples stored 
+                                       #'     in the internal results. If samples do not exist, \code{self$simulate()} is triggered automatically. 
+                                       #'     This represents the expectation integrated over the uncertainty of the latent process.
+                                       #'     \item \code{"conditional"}: Computes predictions using the systematic component of the 
+                                       #'     Generalized Linear Model (GLM). It calculates the linear predictor \eqn{\eta = X\beta} 
+                                       #'     (plus offset and popularity terms for the network) and applies the inverse link function 
+                                       #'     \eqn{\mu = g^{-1}(\eta)}.
+                                       #'   }
+                                       #'   Defaults to \code{c("conditional", "marginal")}.
+                                       #' @param type A character vector indicating which components to predict. Options are:
+                                       #'   \itemize{
+                                       #'     \item \code{"x"}: Nodal covariates.
+                                       #'     \item \code{"y"}: Nodal outcome variable.
+                                       #'     \item \code{"z"}: Dyadic network structure (interaction probabilities).
+                                       #'   }
+                                       #'   Defaults to \code{c("x", "y", "z")}.
+                                       #'
+                                       #' @details
+                                       #' \strong{Marginal Predictions:}
+                                       #' When \code{variant = "marginal"}, the function approximates the expected value via Monte Carlo integration:
+                                       #' \deqn{\hat{\mu} = \frac{1}{S} \sum_{s=1}^{S} y^{(s)}}
+                                       #' where \eqn{y^{(s)}} are the realized values from the \eqn{s}-th simulation sample. 
+                                       #' For the network \code{z}, this results in an edge probability matrix averaged over all sampled networks.
+                                       #'
+                                       #' \strong{Conditional Predictions:}
+                                       #' When \code{variant = "conditional"}, the function calculates the theoretical mean \eqn{\mu} based on the 
+                                       #' estimated coefficients \eqn{\hat{\theta}}:
+                                       #' \itemize{
+                                       #'   \item For \strong{Binomial} families: \eqn{\mu = (1 + \exp(-\eta))^{-1}} (Logistic).
+                                       #'   \item For \strong{Poisson} families: \eqn{\mu = \exp(\eta)} (Exponential).
+                                       #'   \item For \strong{Gaussian} families: \eqn{\mu = \eta} (Identity).
+                                       #' }
+                                       #' For the network component \code{z}, the linear predictor includes dyadic covariates, 
+                                       #' popularity effects (sender/receiver variances), and structural offsets.
+                                       #'
+                                       #' @return A list containing the requested predictions:
+                                       #' \describe{
+                                       #'   \item{\code{x}, \code{y}}{A matrix or data frame where the first column is the actor ID and subsequent 
+                                       #'   columns represent the predicted mean values.}
+                                       #'   \item{\code{z}}{A data frame containing the edgelist with columns: \code{sender}, \code{receiver}, 
+                                       #'   and \code{prediction} (probability or intensity).}
+                                       #' }
+                                       #' The results are also invisibly stored in the internal state \code{private$.results}.
+                                       predict = function(variant = c("conditional", "marginal"), type = c("x", "y", "z")){
+                                         if(!private$.results$estimated){
+                                           stop("Model has not been estimated yet, prediction thus makes little sense.", call. = FALSE)
+                                         }
+                                         res <- list()
+                                         if(length(variant) >1){
+                                           stop("Please provide only one variant: 'conditional' or 'marginal'.", call. = FALSE)
+                                         }
+                                         if(variant == "marginal"){
+                                           if(is.null(private$.results$samples)){
+                                             self$simulate()
+                                           }
+                                           if("x" %in% type){
+                                             res$x <- data.frame(cbind(1:private$.iglm.data$n_actor,private$.iglm.data$x_attribute,
+                                                            colMeans(do.call(what = "rbind", lapply(private$.results$samples,function(x) x$x_attribute)))))
+                                             names(res$x) <- c("actor","target", "prediction")
+                                           }
+                                           if("y" %in% type){
+                                             res$y <- data.frame(cbind(1:private$.iglm.data$n_actor,private$.iglm.data$y_attribute,
+                                                            colMeans(do.call(what = "rbind", lapply(private$.results$samples,function(x) x$y_attribute)))))
+                                             names(res$y) <- c("actor", "target","prediction")
+                                           }
+                                           if("z" %in% type){
+                                             
+                                             matrices_list <- lapply(private$.results$samples,function(x) sparseMatrix(x$z_network[,1],x$z_network[,2], symmetric = !x$directed,
+                                                                                                                       dims = c(x$n_actor,x$n_actor)))
+                                             res_z <- Reduce("+", matrices_list)/length(matrices_list)
+                                             res_z <- as.matrix(res_z)
+                                             rownames(res_z) <- colnames(res_z) <- paste0(1:private$.iglm.data$n_actor)
+                                             network_obs <- matrix(0, nrow = private$.iglm.data$n_actor, ncol = private$.iglm.data$n_actor)
+                                             network_obs[private$.iglm.data$z_network] <- 1
+                                             res$z <- data.frame(
+                                               sender = rownames(res_z)[row(res_z)],
+                                               receiver = colnames(res_z)[row(res_z)],
+                                               target = as.vector(network_obs), 
+                                               prediction = as.vector(res_z)
+                                             )
+                                           }
+                                         } else if(variant == "conditional"){
+                                           # browser()
+                                           control_old <- private$.control
+                                           private$.control$estimate_model <- FALSE
+                                           private$.control$display_progress <- FALSE
+                                           private$.control$return_x <- 
+                                             private$.control$return_y <- 
+                                             private$.control$return_z <- FALSE
+                                           if("x" %in% type){
+                                             private$.control$return_x <- TRUE
+                                             info <- self$estimate()
+                                             lp <- info$res_x[,-c(1,2)] %*%private$.coef
+                                             if(private$.iglm.data$type_x == "binomial"){
+                                               mu <- 1/(1+exp(-lp))
+                                             } else if(private$.iglm.data$type_x == "gaussian"){
+                                               mu <- lp
+                                             } else if(private$.iglm.data$type_x == "poisson"){
+                                               mu <- exp(lp)
+                                             }
+                                             private$.control$return_x <- FALSE
+                                             res$x <- data.frame(cbind(info$res_x[,c(2,1)],
+                                                            mu))
+                                             names(res$x) <- c("actor","target", "prediction")
+                                             
+                                           }
+                                           if("y" %in% type){
+                                             private$.control$return_y <- TRUE
+                                             info <- self$estimate()
+                                             lp <- info$res_y[,-c(1,2)] %*%private$.coef
+                                             if(private$.iglm.data$type_y == "binomial"){
+                                               mu <- 1/(1+exp(-lp))
+                                             } else if(private$.iglm.data$type_y == "gaussian"){
+                                               mu <- lp
+                                             } else if(private$.iglm.data$type_y == "poisson"){
+                                               mu <- exp(lp)
+                                             }
+                                             res$y <- data.frame(cbind(info$res_y[,c(2,1)],
+                                                            mu))
+                                             names(res$y) <- c("actor","target", "prediction")
+                                             
+                                             private$.control$return_y <- FALSE
+                                           }
+                                           if("z" %in% type){
+                                             private$.control$return_z <- TRUE
+                                             # debugonce(estimate_xyz)
+                                             info <- self$estimate()
+                                             # private$.control$offset_nonoverlap[]
+                                             lp <- info$res_z[,-c(1,2,3,4)] %*%private$.coef + private$.coef_popularity[info$res_z[,3]] +
+                                               private$.coef_popularity[info$res_z[,3] + private$.iglm.data$n_actor*private$.iglm.data$directed] +
+                                               private$.control$offset_nonoverlap * (1-info$res_z[,4])
+                                             mu <- 1/(1+exp(-lp))
+                                             res$z <- data.frame(cbind(info$res_z[,c(2,3,1)],
+                                                            mu))
+                                             names(res$z)[4] <- c("prediction")
+                                             
+                                           }
+                                         }
+                                         class(res) <- "iglm.prediction"
+                                         private$.results$set_prediction(res)
+                                         invisible(res)
+                                       },
+                                       #' @description
+                                       #' Manually set the model coefficients to new values.
+                                       #' This is useful for sensitivity analyses or
+                                       #' applying the model to different scenarios.
+                                       #' @param coef A numeric vector of new coefficient values for the non-popularity terms.
+                                       #' @param coef_popularity A numeric vector of new coefficient values for the popularity terms,
+                                       #'   if applicable. Must be provided if the model includes popularity effects.
+                                       #' @return The \code{\link{iglm.object}} itself, invisibly.
+                                       set_coefficients = function(coef, coef_popularity = NULL) {
+                                         if(length(coef) != length(private$.coef)) {
+                                           stop(paste0("Length of `coef` (", length(coef), 
+                                                       ") does not match the number of model coefficients (", 
+                                                       length(private$.coef), ")."), call. = FALSE)
+                                         }
+                                         private$.coef <- coef
+                                         if(private$.preprocess$includes_popularity) {
+                                           if(is.null(coef_popularity)) {
+                                             stop("Model includes popularity effects; `coef_popularity` must be provided.", call. = FALSE)
+                                           }
+                                           if(length(coef_popularity) != length(private$.coef_popularity)) {
+                                             stop(paste0("Length of `coef_popularity` (", length(coef_popularity), 
+                                                         ") does not match the number of popularity coefficients (", 
+                                                         length(private$.coef_popularity), ")."), call. = FALSE)
+                                           }
+                                           private$.coef_popularity <- coef_popularity
+                                           private$.coef_popularity_internal <- coef_popularity
+                                         }
+                                         private$.validate()
+                                         invisible(self)
+                                       },
                                        #' @description
                                        #' Retrieve the simulated networks stored in the object.
                                        #' Requires \code{simulate} or \code{estimate} to have been run first.
@@ -619,11 +818,11 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        #' Replace the internal MCMC sampler with a new one.
                                        #' This is useful for changing the sampling scheme without
                                        #' redefining the entire model.
-                                       #' @param sampler A \code{\link{sampler_iglm}} object.
-                                       #'  @return The \code{\link{iglm_object}} itself, invisibly.
+                                       #' @param sampler A \code{\link{sampler.iglm}} object.
+                                       #'  @return The \code{\link{iglm.object}} itself, invisibly.
                                        set_sampler = function(sampler) {
-                                         if (!inherits(sampler, "sampler_iglm")) {
-                                           stop("`sampler` must be a 'sampler_iglm' object created with sampler.iglm().")
+                                         if (!inherits(sampler, "sampler.iglm")) {
+                                           stop("`sampler` must be a 'sampler.iglm' object created with sampler.iglm().")
                                          }
                                          private$.sampler <- sampler
                                          if(private$.control$display_progress){
@@ -636,7 +835,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        #' useful for applying a fitted model to new observed data. Recalculates
                                        #' count statistics and re-validates the object.
                                        #' @param x A \code{\link{iglm.data}} `` object containing the new observed data.
-                                       #' @return The \code{\link{iglm_object}} itself, invisibly.
+                                       #' @return The \code{\link{iglm.object}} itself, invisibly.
                                        set_target = function(x) {
                                          if(!"iglm.data" %in% class(x)) {
                                            stop("The target object must be of class 'iglm.data'.", call. = FALSE)
@@ -675,7 +874,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
                                        #' @field control (`control.iglm`) Read-only. The \code{\link{control.iglm}} object specifying estimation parameters.
                                        control = function(value) { if(missing(value)) private$.control else stop("`control` is read-only.", call. = FALSE) },
                                        
-                                       #' @field sampler (`sampler_iglm`) Read-only. The  \code{\link{sampler_iglm}} object specifying MCMC sampling parameters.
+                                       #' @field sampler (`sampler.iglm`) Read-only. The  \code{\link{sampler.iglm}} object specifying MCMC sampling parameters.
                                        sampler = function(value) { if(missing(value)) private$.sampler else stop("`sampler` is read-only.", call. = FALSE) },
                                        
                                        #' @field sufficient_statistics (`numeric`) Read-only. A named vector of the observed network statistics corresponding to the model terms, calculated on the current `iglm.data` data.
@@ -714,20 +913,20 @@ iglm_object_generator <- R6::R6Class("iglm_object",
 #' }
 #' This separation allows the model to simultaneously capture individual-level
 #' behavior (via \eqn{g_i}) and dyadic, network-based dependencies (via \eqn{h_{i,j}}), 
-#' including local dependence limited to overlapping neighborhoods (see, Fritz et al., 2025). 
+#' including lo cal dependence limited to overlapping neighborhoods (see, Fritz et al., 2025). 
 #' This help page documents the various statistics available in 'iglm',
 #' corresponding to the \eqn{g_i} (attribute-level) and \eqn{h_{i,j}} (pair-level)
 #' components of the joint model.
-#' This is a user-facing constructor for creating a \code{\link{iglm_object}}. This \code{R6} object 
+#' This is a user-facing constructor for creating a \code{\link{iglm.object}}. This \code{R6} object 
 #' encompasses the complete model specification, linking the formula, data (\code{\link{iglm.data}} object), 
 #' initial coefficients, MCMC sampler settings, and estimation controls.
 #' It serves as the primary input for subsequent methods like \code{$estimate()} and \code{$simulate()}.
-#' @return An object of class \code{\link{iglm_object}}.
+#' @return An object of class \code{\link{iglm.object}}.
 #' 
 #'
 #' @param formula A model `formula` object. The left-hand side should be the
 #'   name of a `iglm.data` object available in the calling environment. 
-#'   See \code{\link{model_terms}} for details on specifying the right-hand side terms.
+#'   See \code{\link{model.terms}} for details on specifying the right-hand side terms.
 #' @param coef Optional numeric vector of initial coefficients for the structural
 #'   (non-popularity) terms in `formula`. If `NULL`, coefficients are
 #'   initialized to zero. Length must match the number of terms.
@@ -735,14 +934,14 @@ iglm_object_generator <- R6::R6Class("iglm_object",
 #'   coefficients. Required if `formula` includes popularity terms, otherwise
 #'   should be `NULL`. Length must match `n_actor` (for undirected) or
 #'   `2 * n_actor` (for directed).
-#' @param sampler An object of class \code{\link{sampler_iglm}}, controlling the MCMC sampling scheme. If `NULL`,
+#' @param sampler An object of class \code{\link{sampler.iglm}}, controlling the MCMC sampling scheme. If `NULL`,
 #'   default sampler settings will be used.
 #' @param control An object of class \code{\link{control.iglm}}, specifying parameters for the estimation algorithm.
 #'   If `NULL`, default control settings will be used.
 #' @param file Optional character string specifying a file path to load a
-#'  previously saved  \code{\link{iglm_object}} from disk (in RDS format). If provided,
+#'  previously saved  \code{\link{iglm.object}} from disk (in RDS format). If provided,
 #'  other arguments are ignored and the object is loaded from the file.
-#' @aliases iglm_object
+#' @aliases iglm.object
 #' @examples
 #' # Example usage:
 #' library(iglm)
@@ -756,9 +955,9 @@ iglm_object_generator <- R6::R6Class("iglm_object",
 #' gt_coef_pop <- rnorm(n = n_actors, -2, 1)
 #' # Define MCMC sampler
 #' sampler_new <- sampler.iglm(n_burn_in = 100, n_simulation = 10,
-#'                                sampler.x = sampler.net_attr(n_proposals = n_actors * 10, seed = 13),
-#'                                sampler.y = sampler.net_attr(n_proposals = n_actors * 10, seed = 32),
-#'                                sampler.z = sampler.net_attr(n_proposals = sum(neighborhood > 0
+#'                                sampler_x = sampler.net.attr(n_proposals = n_actors * 10, seed = 13),
+#'                                sampler_y = sampler.net.attr(n_proposals = n_actors * 10, seed = 32),
+#'                                sampler_z = sampler.net.attr(n_proposals = sum(neighborhood > 0
 #'                                ) * 10, seed = 134),
 #'                                init_empty = FALSE)
 #' # Create iglm model specification
@@ -794,7 +993,7 @@ iglm_object_generator <- R6::R6Class("iglm_object",
 iglm <- function(formula = NULL, coef= NULL, coef_popularity = NULL, sampler = NULL, 
                  control = NULL, file = NULL) {
   # browser()
-  iglm_object_generator$new(
+  iglm.object.generator$new(
     formula = formula, 
     coef = coef, 
     coef_popularity = coef_popularity, 

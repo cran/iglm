@@ -19,7 +19,7 @@ simulate_iglm(
 \arguments{
 \item{formula}{A model `formula` object. The left-hand side should be the
 name of a `iglm.data` object available in the calling environment. 
-See \code{\link{model_terms}} for details on specifying the right-hand side terms.}
+See \code{\link{model.terms}} for details on specifying the right-hand side terms.}
 
 \item{coef}{Numeric vector containing the coefficient values for the structural
 (non-popularity) terms defined in the `formula`.}
@@ -30,11 +30,11 @@ values (expansiveness/attractiveness). This is required \strong{only if} the
 undirected networks) or `2 * n_actor` (for directed networks), where
 `n_actor` is determined from the `iglm.data` object in the formula.}
 
-\item{sampler}{An object of class `sampler_iglm` (created by
+\item{sampler}{An object of class `sampler.iglm` (created by
 `sampler.iglm()`) specifying the MCMC sampling parameters. This includes
 the number of simulations (`n_simulation`), burn-in iterations (`n_burn_in`),
 initialization settings (`init_empty`), and component sampler settings
-(`sampler.x`, `sampler.y`, etc.).
+(`sampler_x`, `sampler_y`, etc.).
 If `NULL` (default), default settings from `sampler.iglm()` are used.}
 
 \item{only_stats}{(logical). If \code{TRUE} (default, consistent with the usage signature), the
