@@ -14,7 +14,7 @@ for results.
 \references{
 Fritz, C., Schweinberger, M. , Bhadra S., and D. R. Hunter (2025). A Regression Framework for Studying Relationships among Attributes under Network Interference. Journal of the American Statistical Association, to appear.
 
-Stewart, J. R. and M. Schweinberger (2025). Pseudo-Likelihood-Based M-Estimation of Random Graphs with Dependent Edges and Parameter Vectors of Increasing Dimension. Annals of Statistics, to appear. 
+Stewart, J. R. and M. Schweinberger (2025). Pseudo-Likelihood-Based M-Estimation of Random Graphs with Dependent Edges and Parameter Vectors of Increasing Dimension. Annals of Statistics, to appear.
 
 Schweinberger, M. and M. S. Handcock (2015). Local dependence in random graph models: characterization, properties, and statistical inference. Journal of the Royal Statistical Society, Series B (Statistical Methodology), 7, 647-676.
 }
@@ -23,9 +23,9 @@ Schweinberger, M. and M. S. Handcock (2015). Local dependence in random graph mo
 \describe{
 \item{\code{formula}}{(`formula`) Read-only. The model formula specifying terms and data object.}
 
-\item{\code{coef}}{(`numeric`) Read-only. The current vector of non-popularity coefficient estimates or initial values.}
+\item{\code{coef}}{(`numeric`) Read-only. The current vector of non-degrees coefficient estimates or initial values.}
 
-\item{\code{coef_popularity}}{(`numeric` or `NULL`) Read-only. The current vector of popularity coefficient estimates or initial values, or `NULL` if not applicable.}
+\item{\code{coef_degrees}}{(`numeric` or `NULL`) Read-only. The current vector of degrees coefficient estimates or initial values, or `NULL` if not applicable.}
 
 \item{\code{results}}{(`results`) Read-only. The \code{\link{results}} R6 object containing all estimation and simulation outputs.}
 
@@ -35,6 +35,8 @@ Schweinberger, M. and M. S. Handcock (2015). Local dependence in random graph mo
 
 \item{\code{sampler}}{(`sampler.iglm`) Read-only. The  \code{\link{sampler.iglm}} object specifying MCMC sampling parameters.}
 
+\item{\code{name}}{(`character`) Read-only. The name of the model.}
+
 \item{\code{sufficient_statistics}}{(`numeric`) Read-only. A named vector of the observed network statistics corresponding to the model terms, calculated on the current `iglm.data` data.}
 }
 \if{html}{\out{</div>}}
@@ -43,10 +45,13 @@ Schweinberger, M. and M. S. Handcock (2015). Local dependence in random graph mo
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-iglm.object-new}{\code{iglm.object.generator$new()}}
-\item \href{#method-iglm.object-model_assessment}{\code{iglm.object.generator$model_assessment()}}
+\item \href{#method-iglm.object-is_equivalent}{\code{iglm.object.generator$is_equivalent()}}
+\item \href{#method-iglm.object-assess}{\code{iglm.object.generator$assess()}}
 \item \href{#method-iglm.object-print}{\code{iglm.object.generator$print()}}
 \item \href{#method-iglm.object-plot}{\code{iglm.object.generator$plot()}}
 \item \href{#method-iglm.object-gather}{\code{iglm.object.generator$gather()}}
+\item \href{#method-iglm.object-set_name}{\code{iglm.object.generator$set_name()}}
+\item \href{#method-iglm.object-set_control}{\code{iglm.object.generator$set_control()}}
 \item \href{#method-iglm.object-save}{\code{iglm.object.generator$save()}}
 \item \href{#method-iglm.object-estimate}{\code{iglm.object.generator$estimate()}}
 \item \href{#method-iglm.object-summary}{\code{iglm.object.generator$summary()}}
@@ -80,9 +85,10 @@ and control objects, calculating initial statistics, and validating.
 \if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$new(
   formula = NULL,
   coef = NULL,
-  coef_popularity = NULL,
+  coef_degrees = NULL,
   sampler = NULL,
   control = NULL,
+  name = NULL,
   file = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -91,22 +97,25 @@ and control objects, calculating initial statistics, and validating.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{formula}}{A model `formula` object. The left-hand side should be the
-name of a \code{\link{iglm.data}} object available in the calling environment. 
+name of a \code{\link{iglm.data}} object available in the calling environment.
 See \code{\link{model.terms}} for details on specifying the right-hand side terms.}
 
 \item{\code{coef}}{A numeric vector of initial coefficients for the terms in
-the formula (excluding popularity). If `NULL`, coefficients are
+the formula (excluding degree coefficeints). If `NULL`, coefficients are
 initialized to zero.}
 
-\item{\code{coef_popularity}}{An optional numeric vector of initial popularity
+\item{\code{coef_degrees}}{An optional numeric vector of initial degree
 coefficients. Should be `NULL` if the formula does
-not include popularity terms.}
+not include degree-correcting terms.}
 
 \item{\code{sampler}}{A \code{\link{sampler.iglm}} object specifying the MCMC sampler
 settings. If `NULL`, default settings are used.}
 
 \item{\code{control}}{A \code{\link{control.iglm}} object specifying estimation control
 parameters. If `NULL`, default settings are used.}
+
+\item{\code{name}}{An optional character string specifying a name for the model,
+would be used in plots and model assessment.}
 
 \item{\code{file}}{(character or `NULL`) If provided, loads the sampler state from
 the specified .rds file instead of initializing from parameters.}
@@ -118,16 +127,43 @@ A new `iglm.object`.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-iglm.object-model_assessment"></a>}}
-\if{latex}{\out{\hypertarget{method-iglm.object-model_assessment}{}}}
-\subsection{Method \code{model_assessment()}}{
+\if{html}{\out{<a id="method-iglm.object-is_equivalent"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.object-is_equivalent}{}}}
+\subsection{Method \code{is_equivalent()}}{
+Check if this iglm object is equivalent to another iglm object by comparing
+their defining features, data, and parameters.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$is_equivalent(other, tol = 1e-05, check_results = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{other}}{Another object to compare against.}
+
+\item{\code{tol}}{Tolerance for numeric comparisons (default is 1e-5).}
+
+\item{\code{check_results}}{(logical) If `TRUE`, also requires the estimation results
+and MCMC samples to match exactly. Default is `FALSE` (only compares model
+specification, input data, and initial coefficients).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+`TRUE` if the objects are equivalent, otherwise `FALSE`.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.object-assess"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.object-assess}{}}}
+\subsection{Method \code{assess()}}{
 Performs model assessment by calculating specified network statistics
 on the observed network and comparing their distribution to the
 distribution obtained from simulated networks based on the current
 model parameters. Requires simulations to have been run first (via
  \code{iglm.object$simulate} or \code{iglm.object_generator$estimate}).
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$model_assessment(formula, plot = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$assess(formula, plot = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -135,8 +171,8 @@ model parameters. Requires simulations to have been run first (via
 \describe{
 \item{\code{formula}}{A formula specifying the network statistics to assess
 (e.g., `~ degree_distribution() + geodesic_distances_distribution()`).
-The terms should correspond to methods available in the \code{\link{iglm.data}} 
-object that end with `distributions`. 
+The terms should correspond to methods available in the \code{\link{iglm.data}}
+object that end with `distributions`.
 If the term mcmc_diagnostics is included, MCMC diagnostics will also be computed.}
 
 \item{\code{plot}}{(logical) If `TRUE`, generates plots comparing observed and simulated statistics. Default is `TRUE`.}
@@ -156,7 +192,7 @@ An object of class `iglm_model_assessment` containing the
 Print a summary of the `iglm.object`. If estimation results are
 available, they are printed in a standard coefficient table format.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$print(digits = 4, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$print(digits = 4, rows = c(1, 2), formula_print = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -164,7 +200,10 @@ available, they are printed in a standard coefficient table format.
 \describe{
 \item{\code{digits}}{(integer) Number of digits for rounding numeric output.}
 
-\item{\code{...}}{Additional arguments (not used).}
+\item{\code{rows}}{numeric vector is provided with values between 1 and 4,
+only the corresponding columns are printed (1: Estimate, 2: SE, 3: t-value, 4: Pr(>|t|), 5: Global Count of Sufficient Statistic). Default is `c(1, 2)` to show only estimates and standard errors.}
+
+\item{\code{formula_print}}{(logical) If `TRUE`, also prints the model formula. Default is `TRUE`.}
 }
 \if{html}{\out{</div>}}
 }
@@ -216,6 +255,47 @@ A list containing all key components of the \code{\link{iglm.object}}.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.object-set_name"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.object-set_name}{}}}
+\subsection{Method \code{set_name()}}{
+Set the name of the \code{\link{iglm.object}}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$set_name(name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{name}}{(character) The name to assign to the object.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The name of the object as a character string.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.object-set_control"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.object-set_control}{}}}
+\subsection{Method \code{set_control()}}{
+Set control parameters for model estimation.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$set_control(control)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{control}}{A \code{\link{control.iglm}} object specifying new
+control settings.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns `NULL`.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-iglm.object-save"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.object-save}{}}}
 \subsection{Method \code{save()}}{
@@ -227,7 +307,7 @@ Save the \code{\link{iglm.object}} to a file in RDS format.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{file}}{(character) File path to save the object to.}
+\item{\code{file}}{(character) File path to save the object to (has to be a RDS object).}
 }
 \if{html}{\out{</div>}}
 }
@@ -246,19 +326,21 @@ Stores the results internally and updates the coefficient fields.
 }
 
 \subsection{Returns}{
-If the no preprocessing should be returned 
-  (as per control settings), this function returns a list containing detailed estimation results, invisibly.
-  Includes final coefficients, variance-covariance matrix, convergence
-  path, Fisher information, score vector, log-likelihood, and any
-  simulations performed during estimation.
-  Else, the function returns a list of the desired preprocessed data (as a data.frame) and needed time.
+If no preprocessing should be returned (as per control settings),
+  this function returns a list containing detailed estimation results,
+  invisibly. Includes final coefficients, variance-covariance matrix,
+  convergence path, Fisher information, score vector, log-likelihood,
+  and any simulations performed during estimation.
+  Else, the function returns a list of the desired preprocessed data
+  (as a data.frame) and needed time.
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-iglm.object-summary"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.object-summary}{}}}
 \subsection{Method \code{summary()}}{
-Provides a summary of the estimation results.
+Provides a summary of the estimation results with the following columns: Estimate, SE,
+t-value, and Pr(>|t|).
 Requires the model to have been estimated first.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$summary(digits = 3)}\if{html}{\out{</div>}}
@@ -280,11 +362,10 @@ Prints the summary to the console and returns `NULL` invisibly.
 \if{latex}{\out{\hypertarget{method-iglm.object-simulate}{}}}
 \subsection{Method \code{simulate()}}{
 Simulate networks from the fitted model or a specified model. Stores
-the simulations and/or summary statistics internally. The simulation 
+the simulations and/or summary statistics internally. The simulation
 is carried out using the internal MCMC sampler described in \code{\link{simulate_iglm}}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$simulate(
-  nsim = 1,
   only_stats = FALSE,
   display_progress = TRUE,
   offset_nonoverlap = 0
@@ -294,8 +375,6 @@ is carried out using the internal MCMC sampler described in \code{\link{simulate
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{nsim}}{(integer) Number of networks to simulate. Default is 1.}
-
 \item{\code{only_stats}}{(logical) If `TRUE`, only calculate and store summary
 statistics for each simulation, discarding the network object itself.
 Default is `FALSE`.}
@@ -304,8 +383,8 @@ Default is `FALSE`.}
 progress bar during simulation.}
 
 \item{\code{offset_nonoverlap}}{(numeric) Offset to apply for non-overlapping
-dyads during simulation (if applicable to the sampler). This option 
-is useful if the sparsity of edges of units with non-overlapping 
+dyads during simulation (if applicable to the sampler). This option
+is useful if the sparsity of edges of units with non-overlapping
 neighborhoods is known. Default is 0.}
 }
 \if{html}{\out{</div>}}
@@ -320,9 +399,9 @@ A list containing the simulated networks (`samples`, as a
 \if{html}{\out{<a id="method-iglm.object-predict"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.object-predict}{}}}
 \subsection{Method \code{predict()}}{
-Calculates predicted values for the nodal covariates (\code{x}), the outcome variable (\code{y}), 
-and the network structure (\code{z}). The function supports two prediction modes: 
-\emph{marginal} (based on Monte Carlo integration over simulated samples) and 
+Calculates predicted values for the nodal covariates (\code{x}), the outcome variable (\code{y}),
+and the network structure (\code{z}). The function supports two prediction modes:
+\emph{marginal} (based on Monte Carlo integration over simulated samples) and
 \emph{conditional} (based on the analytical linear predictor and point estimates).
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$predict(
@@ -334,15 +413,15 @@ and the network structure (\code{z}). The function supports two prediction modes
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{variant}}{A character string specifying the type of prediction to generate. 
+\item{\code{variant}}{A character string specifying the type of prediction to generate.
 Must be one of:
 \itemize{
-  \item \code{"marginal"}: Computes predictions by aggregating over the MCMC samples stored 
-  in the internal results. If samples do not exist, \code{self$simulate()} is triggered automatically. 
+  \item \code{"marginal"}: Computes predictions by aggregating over the MCMC samples stored
+  in the internal results. If samples do not exist, \code{self$simulate()} is triggered automatically.
   This represents the expectation integrated over the uncertainty of the latent process.
-  \item \code{"conditional"}: Computes predictions using the systematic component of the 
-  Generalized Linear Model (GLM). It calculates the linear predictor \eqn{\eta = X\beta} 
-  (plus offset and popularity terms for the network) and applies the inverse link function 
+  \item \code{"conditional"}: Computes predictions using the systematic component of the
+  Generalized Linear Model (GLM). It calculates the linear predictor \eqn{\eta = X\beta}
+  (plus offset and degrees terms for the network) and applies the inverse link function
   \eqn{\mu = g^{-1}(\eta)}.
 }
 Defaults to \code{c("conditional", "marginal")}.}
@@ -361,27 +440,27 @@ Defaults to \code{c("x", "y", "z")}.}
 \strong{Marginal Predictions:}
 When \code{variant = "marginal"}, the function approximates the expected value via Monte Carlo integration:
 \deqn{\hat{\mu} = \frac{1}{S} \sum_{s=1}^{S} y^{(s)}}
-where \eqn{y^{(s)}} are the realized values from the \eqn{s}-th simulation sample. 
+where \eqn{y^{(s)}} are the realized values from the \eqn{s}-th simulation sample.
 For the network \code{z}, this results in an edge probability matrix averaged over all sampled networks.
 
 \strong{Conditional Predictions:}
-When \code{variant = "conditional"}, the function calculates the theoretical mean \eqn{\mu} based on the 
+When \code{variant = "conditional"}, the function calculates the theoretical mean \eqn{\mu} based on the
 estimated coefficients \eqn{\hat{\theta}}:
 \itemize{
   \item For \strong{Binomial} families: \eqn{\mu = (1 + \exp(-\eta))^{-1}} (Logistic).
   \item For \strong{Poisson} families: \eqn{\mu = \exp(\eta)} (Exponential).
   \item For \strong{Gaussian} families: \eqn{\mu = \eta} (Identity).
 }
-For the network component \code{z}, the linear predictor includes dyadic covariates, 
-popularity effects (sender/receiver variances), and structural offsets.
+For the network component \code{z}, the linear predictor includes dyadic covariates,
+degrees effects (sender/receiver variances), and structural offsets.
 }
 
 \subsection{Returns}{
 A list containing the requested predictions:
 \describe{
-  \item{\code{x}, \code{y}}{A matrix or data frame where the first column is the actor ID and subsequent 
+  \item{\code{x}, \code{y}}{A matrix or data frame where the first column is the actor ID and subsequent
   columns represent the predicted mean values.}
-  \item{\code{z}}{A data frame containing the edgelist with columns: \code{sender}, \code{receiver}, 
+  \item{\code{z}}{A data frame containing the edgelist with columns: \code{sender}, \code{receiver},
   and \code{prediction} (probability or intensity).}
 }
 The results are also invisibly stored in the internal state \code{private$.results}.
@@ -395,16 +474,16 @@ Manually set the model coefficients to new values.
 This is useful for sensitivity analyses or
 applying the model to different scenarios.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$set_coefficients(coef, coef_popularity = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{iglm.object.generator$set_coefficients(coef, coef_degrees = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{coef}}{A numeric vector of new coefficient values for the non-popularity terms.}
+\item{\code{coef}}{A numeric vector of new coefficient values for the non-degrees terms.}
 
-\item{\code{coef_popularity}}{A numeric vector of new coefficient values for the popularity terms,
-if applicable. Must be provided if the model includes popularity effects.}
+\item{\code{coef_degrees}}{A numeric vector of new coefficient values for the degrees terms,
+if applicable. Must be provided if the model includes degrees effects.}
 }
 \if{html}{\out{</div>}}
 }

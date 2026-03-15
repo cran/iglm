@@ -6,27 +6,34 @@
 \usage{
 simulate_iglm(
   formula,
+  basis = NULL,
   coef,
-  coef_popularity = NULL,
+  coef_degrees = NULL,
   sampler = NULL,
   only_stats = TRUE,
   display_progress = FALSE,
   offset_nonoverlap = 0,
   cluster = NULL,
-  fix_x = FALSE
+  fix_x = FALSE,
+  fix_z = FALSE
 )
 }
 \arguments{
 \item{formula}{A model `formula` object. The left-hand side should be the
-name of a `iglm.data` object available in the calling environment. 
+name of a `iglm.data` object available in the calling environment.
 See \code{\link{model.terms}} for details on specifying the right-hand side terms.}
 
-\item{coef}{Numeric vector containing the coefficient values for the structural
-(non-popularity) terms defined in the `formula`.}
+\item{basis}{An optional `iglm.data` object to serve as the basis for the simulation.
+If provided, the simulation starts from the state defined in this object.
+If `NULL` (default), the initial state is taken from the `iglm.data` object
+referenced in the `formula`.}
 
-\item{coef_popularity}{Numeric vector specifying the popularity coefficient
+\item{coef}{Numeric vector containing the coefficient values for the structural
+(non-degrees) terms defined in the `formula`.}
+
+\item{coef_degrees}{Numeric vector specifying the degrees coefficient
 values (expansiveness/attractiveness). This is required \strong{only if} the
-`formula` includes popularity terms. Its length must be `n_actor` (for
+`formula` includes degrees terms. Its length must be `n_actor` (for
 undirected networks) or `2 * n_actor` (for directed networks), where
 `n_actor` is determined from the `iglm.data` object in the formula.}
 
@@ -64,14 +71,18 @@ all simulations are run sequentially in the main R process.}
 at its initial state (from the \code{\link{iglm.data}} object) and only simulates the
 `y_attribute` and `z_network`. If `FALSE` (default), all components (x, y, z)
 are simulated according to the model and sampler settings.}
+
+\item{fix_z}{Logical. If `TRUE`, the simulation holds the `z_network` fixed
+at its initial state (from the \code{\link{iglm.data}} object). If `FALSE` (default), the network component
+is simulated according to the model and sampler settings.}
 }
 \value{
-A list containing two components:
+A list containing one or two components (depending on `only_stats`):
 \describe{
   \item{`samples`}{If `only_stats = FALSE`, this is a list of length
     `sampler$n_simulation` where each element is a `iglm.data` object
     representing one simulated draw from the model. The list has the S3 class
-    `"iglm.data.list"`. If `only_stats = TRUE`, this is typically an empty list.}
+    `"iglm.data.list"`. If `only_stats = TRUE`, this component is omitted.}
   \item{`stats`}{A numeric matrix with `sampler$n_simulation` rows and
     `length(coef)` columns. Each row contains the features
     (corresponding to the model terms in `formula`) calculated for one

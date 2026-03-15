@@ -1,8 +1,8 @@
 Package: iglm
 Type: Package
-Title: Regression under Network Interference
-Version: 1.1
-Date: 2025-11-09
+Title: Regression under Interference in Connected Populations
+Version: 1.2
+Date: 2026-03-15
 Authors@R: c(
     person(given = "Cornelius", family = "Fritz", role = c("aut", "cre"), email = "corneliusfritz2010@gmail.com"), 
     person(given = "Michael", family = "Schweinberger", role = c("aut"), email = "michael.schweinberger@psu.edu"))
@@ -16,11 +16,12 @@ LinkingTo: Rcpp, RcppProgress, RcppArmadillo, Matrix
 RoxygenNote: 7.3.3
 Encoding: UTF-8
 VignetteBuilder: knitr
-LazyData: true
+LazyData: false
+SystemRequirements: C++17
 NeedsCompilation: yes
-Packaged: 2025-11-26 18:03:48 UTC; corneliusfritz
+Packaged: 2026-03-15 20:01:31 UTC; corneliusfritz
 Author: Cornelius Fritz [aut, cre],
   Michael Schweinberger [aut]
 Maintainer: Cornelius Fritz <corneliusfritz2010@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-11-28 13:00:23 UTC
+Date/Publication: 2026-03-15 20:20:02 UTC

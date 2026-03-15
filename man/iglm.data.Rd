@@ -15,6 +15,9 @@ iglm.data(
   type_y = "binomial",
   scale_x = 1,
   scale_y = 1,
+  fix_x = FALSE,
+  fix_z = FALSE,
+  fix_z_alocal = FALSE,
   return_neighborhood = TRUE,
   file = NULL
 )
@@ -28,8 +31,8 @@ iglm.data(
 edgelist or a square adjacency matrix.}
 
 \item{neighborhood}{An optional matrix for the neighborhood representing local dependence.
-Can be a 2-column edgelist or a square adjacency matrix. 
-A tie in `neighborhood` between actor i and j indicates that j is in the neighborhood of i, 
+Can be a 2-column edgelist or a square adjacency matrix.
+A tie in `neighborhood` between actor i and j indicates that j is in the neighborhood of i,
 implying dependence between the respective actors.}
 
 \item{directed}{A logical value indicating if `z_network` is directed.
@@ -54,6 +57,17 @@ for "normal" type). Default is 1.}
 \item{scale_y}{A positive numeric value for scaling (e.g., variance
 for "normal" type). Default is 1.}
 
+\item{fix_x}{(logical) If `TRUE`, the 'x' predictor is held fixed
+during estimation/simulation (fixed design in regression). Default is `FALSE`.}
+
+\item{fix_z}{(logical) If `TRUE`, the 'z' network is held fixed
+during estimation/simulation (fixed network design). Default is `FALSE`.
+Setting this to TRUE, allows practicioners to estimate autologistic actor attribute models,
+which were introduced in binary settings in Daraganova, G., & Robins, G. (2013).}
+
+\item{fix_z_alocal}{(logical) If `TRUE`, edges outside the overlap region
+are fixed, else they are random (default).}
+
 \item{return_neighborhood}{Logical. If `TRUE` (default) and
 `neighborhood` is `NULL`, a full neighborhood (all dyads) is
 generated implying global dependence. If `FALSE`, no neighborhood is set.}
@@ -73,29 +87,43 @@ relation based on an optional neighborhood definition, and performs
 extensive validation of all inputs.
 }
 \examples{
-data(state_twitter)
+\donttest{
+data("state_twitter")
+state_twitter
 state_twitter$iglm.data$degree_distribution(prob = FALSE, plot = TRUE)
 state_twitter$iglm.data$geodesic_distances_distribution(prob = FALSE, plot = TRUE)
-state_twitter$iglm.data$density_x()
-state_twitter$iglm.data$density_y()
+state_twitter$iglm.data$mean_x()
+state_twitter$iglm.data$mean_y()
+}
 
 # Generate a small iglm data object either via adjacency matrix or edgelist
-tmp_adjacency <- iglm.data(z_network = matrix(c(0,1,1,0,
-                                                1,0,0,1,
-                                                1,0,0,1,
-                                                0,1,1,0), nrow=4, byrow=TRUE),
-                           directed = FALSE,
-                           n_actor = 4,
-                           type_x = "binomial",
-                           type_y = "binomial")
+tmp_adjacency <- iglm.data(
+  z_network = matrix(c(
+    0, 1, 1, 0,
+    1, 0, 0, 1,
+    1, 0, 0, 1,
+    0, 1, 1, 0
+  ), nrow = 4, byrow = TRUE),
+  directed = FALSE,
+  n_actor = 4,
+  type_x = "binomial",
+  type_y = "binomial"
+)
 
 
-tmp_edgelist <- iglm.data(z_network = tmp_adjacency$z_network, 
-                          directed = FALSE,
-                       n_actor = 4,
-                       type_x = "binomial",
-                       type_y = "binomial")
+tmp_edgelist <- iglm.data(
+  z_network = tmp_adjacency$z_network,
+  directed = FALSE,
+  n_actor = 4,
+  type_x = "binomial",
+  type_y = "binomial"
+)
 
-tmp_edgelist$density_z()
-tmp_adjacency$density_z()
+tmp_edgelist$mean_z()
+tmp_adjacency$mean_z()
+}
+\references{
+Fritz, C., Schweinberger, M. , Bhadra S., and D. R. Hunter (2025). A Regression Framework for Studying Relationships among Attributes under Network Interference. Journal of the American Statistical Association, to appear.
+
+Daraganova, G., and Robins, G. (2013). Exponential random graph models for social networks: Theory, methods and applications, 102-114. Cambridge University Press.
 }

@@ -6,11 +6,10 @@
 \usage{
 control.iglm(
   estimate_model = TRUE,
-  fix_x = FALSE,
   display_progress = FALSE,
   return_samples = TRUE,
   offset_nonoverlap = 0,
-  var = FALSE,
+  var_method = "Mean-value",
   non_stop = FALSE,
   tol = 0.001,
   max_it = 100,
@@ -18,17 +17,12 @@ control.iglm(
   return_y = FALSE,
   return_z = FALSE,
   accelerated = TRUE,
-  cluster = NULL,
-  exact = FALSE,
-  updated_uncertainty = TRUE
+  exact = TRUE
 )
 }
 \arguments{
 \item{estimate_model}{(logical) If `TRUE` (default), the main model parameters
 are estimated. If `FALSE`, estimation is skipped and only the preprocessing is done.}
-
-\item{fix_x}{(logical) If `TRUE`, the 'x' predictor is held fixed
-during estimation/simulation (fixed design in regression). Default is `FALSE`.}
 
 \item{display_progress}{(logical) If `TRUE`, display progress messages or
 a progress bar during estimation. Default is `FALSE`.}
@@ -39,8 +33,8 @@ samples (i.e., \code{iglm.data} objects) generated during estimation (if applica
 \item{offset_nonoverlap}{(numeric) A value added to the linear predictor for
 dyads not in the 'overlap' set. Default is `0`.}
 
-\item{var}{(logical) If `TRUE`, attempt to calculate and return the
-variance-covariance matrix of the estimated parameters. Default is `FALSE`.}
+\item{var_method}{(string) Method for variance estimation. Options are "Mean-value" (default), "Godambe", and "Hessian".
+The mean-value version is described in Section 3.3 of Fritz et al. (2025), the Godambe method is described in Schmid and Hunter (2023), and the "Hessian" option just assumes that the pseudo likelihood is the correct likelihood.}
 
 \item{non_stop}{(logical) If `TRUE`, the estimation algorithm continues until
 `max_it` iterations, ignoring the `tol` convergence criterion. Default is `FALSE`.}
@@ -61,15 +55,7 @@ from samples. Default is `FALSE`. (Note: `return_samples=TRUE` likely implies th
 
 \item{accelerated}{(logical) If `TRUE` (default), an accelerated MM algorithm is used based on a Quasi Newton scheme described in the Supplemental Material of Fritz et al (2025).}
 
-\item{cluster}{A parallel cluster object (e.g., from the `parallel` package)
-to use for potentially parallelizing parts of the estimation or simulation.
-Default is `NULL` (no parallelization).}
-
-\item{exact}{(logical) If `TRUE`, potentially use an exact calculation method
-of the pseudo Fisher information for assessing the uncertainty of the estimates. Default is `FALSE`.}
-
-\item{updated_uncertainty}{(logical) If `TRUE` (default), potentially use an
-updated method for calculating uncertainty estimates (based on the mean-value theorem as opposed to the Godambe Information).}
+\item{exact}{(logical) If `TRUE`, the pseudo Fisher information is calculated exact for assessing the uncertainty of the estimates. Default is `FALSE`.}
 }
 \value{
 A list object of class `"control.iglm"` containing the specified
@@ -80,4 +66,6 @@ Create a list of control parameters for the `iglm` estimation algorithm.
 }
 \references{
 Fritz, C., Schweinberger, M. , Bhadra S., and D. R. Hunter (2025). A Regression Framework for Studying Relationships among Attributes under Network Interference. Journal of the American Statistical Association, to appear.
+
+Schmid, C.S. and D. R. Hunter (2023). Computing Pseudolikelihood Estimators for Exponential-Family Random Graph Models. Journal of Data Science
 }
