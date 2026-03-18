@@ -11,35 +11,35 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{x_attribute}}{(`numeric`) Read-only. The vector for the first unit-level attribute.}
+\item{\code{x_attribute}}{(`numeric`) The vector for the first unit-level attribute.}
 
-\item{\code{y_attribute}}{(`numeric`) Read-only. The vector for the second unit-level attribute.}
+\item{\code{y_attribute}}{(`numeric`) The vector for the second unit-level attribute.}
 
-\item{\code{z_network}}{(`matrix`) Read-only. The primary network structure as a 2-column integer edgelist.}
+\item{\code{z_network}}{(`matrix`) The primary network structure as a 2-column integer edgelist.}
 
 \item{\code{neighborhood}}{(`matrix` or `NULL`) Read-only. The secondary/neighborhood structure as a 2-column integer edgelist. `NULL` if not provided.}
 
 \item{\code{overlap}}{(`matrix`) Read-only. The calculated overlap relation (dyads with shared neighbors in `neighborhood`) as a 2-column integer edgelist.}
 
-\item{\code{directed}}{(`logical`) Read-only. Indicates if the `z_network` is treated as directed.}
+\item{\code{directed}}{(`logical`) Indicates if the `z_network` is treated as directed.}
 
-\item{\code{n_actor}}{(`integer`) Read-only. The total number of actors (nodes) in the network.}
+\item{\code{n_actor}}{(`integer`) The total number of actors (nodes) in the network.}
 
-\item{\code{type_x}}{(`character`) Read-only. The specified distribution type for the `x_attribute`.}
+\item{\code{type_x}}{(`character`) The specified distribution type for the `x_attribute`.}
 
-\item{\code{type_y}}{(`character`) Read-only. The specified distribution type for the `y_attribute`.}
+\item{\code{type_y}}{(`character`) The specified distribution type for the `y_attribute`.}
 
-\item{\code{scale_x}}{(`numeric`) Read-only. The scale parameter associated with the `x_attribute`.}
+\item{\code{scale_x}}{(`numeric`) The scale parameter associated with the `x_attribute`.}
 
-\item{\code{scale_y}}{(`numeric`) Read-only. The scale parameter associated with the `y_attribute`.}
+\item{\code{scale_y}}{(`numeric`) The scale parameter associated with the `y_attribute`.}
 
-\item{\code{fix_x}}{(`logical`) Read-only. Indicates if the `x_attribute` is fixed during estimation/simulation.}
+\item{\code{fix_x}}{(`logical`) Indicates if the `x_attribute` is fixed during estimation/simulation.}
 
-\item{\code{fix_z}}{(`logical`) Read-only. Indicates if the `z_network` is fixed during estimation/simulation.}
+\item{\code{fix_z}}{(`logical`) RIndicates if the `z_network` is fixed during estimation/simulation.}
 
-\item{\code{descriptives}}{(`list`) Read-only. A list storing computed descriptive statistics for the network and attributes.}
+\item{\code{descriptives}}{(`list`)A list storing computed descriptive statistics for the network and attributes.}
 
-\item{\code{fix_z_alocal}}{(`logical`) Read-only. Flag indicating whether nonoverlap edges are treated as random.}
+\item{\code{fix_z_alocal}}{(`logical`) Flag indicating whether nonoverlap edges are treated as random.}
 }
 \if{html}{\out{</div>}}
 }
@@ -459,7 +459,7 @@ Calculates the distribution of the `x_attribute`.
 \if{html}{\out{<div class="r">}}\preformatted{iglm.data_generator$x_distribution(
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -487,7 +487,7 @@ Calculates the distribution of the `y_attribute`.
 \if{html}{\out{<div class="r">}}\preformatted{iglm.data_generator$y_distribution(
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -597,7 +597,7 @@ Calculates the geodesic distance distribution of the symmetrized
 \if{html}{\out{<div class="r">}}\preformatted{iglm.data_generator$geodesic_distances_distribution(
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -645,7 +645,7 @@ Calculates the distribution of edgewise shared partners.
   type = "ALL",
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -681,7 +681,7 @@ Calculates the distribution of dyadwise shared partners.
   type = "ALL",
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -716,7 +716,7 @@ Calculates the degree distribution of the `z_network`.
 \if{html}{\out{<div class="r">}}\preformatted{iglm.data_generator$degree_distribution(
   value_range = NULL,
   prob = TRUE,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -765,7 +765,7 @@ Calculates the spillover degree distribution between actors with
 \if{html}{\out{<div class="r">}}\preformatted{iglm.data_generator$spillover_degree_distribution(
   prob = TRUE,
   value_range = NULL,
-  plot = FALSE
+  plot = TRUE
 )}\if{html}{\out{</div>}}
 }
 

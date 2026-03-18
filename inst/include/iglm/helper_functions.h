@@ -10,7 +10,17 @@
 #include <vector>
 #include <algorithm>
 #include <random>
-#include "iglm/extension_api.hpp"
+#ifndef IGLM_API
+#if defined(_WIN32)
+#ifdef IGLM_COMPILING_IGLM
+#define IGLM_API __declspec(dllexport)
+#else
+#define IGLM_API __declspec(dllimport)
+#endif
+#else
+#define IGLM_API
+#endif
+#endif
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace Rcpp;
 
@@ -311,8 +321,12 @@ inline void mat_to_map_vec(arma::mat mat, int n_actor, bool directed,
     const arma::vec& tmp_row2 = mat.col(1);
     
     for (arma::uword k = 0; k < mat.n_rows; ++k) {
-      int from = tmp_row1[k];
-      int to = tmp_row2[k];
+      int from = (int)tmp_row1[k];
+      int to = (int)tmp_row2[k];
+      
+      if (from < 1 || from > n_actor || to < 1 || to > n_actor) {
+          continue; 
+      }
       
       adj_mat[get_mat_idx(from, to)] = 1;
       
