@@ -1,4 +1,4 @@
-a3ed7614275a0a2e5efcf995135158a9 *DESCRIPTION
+d025fca37fec884cce6c8187e92766dd *DESCRIPTION
 11a2d21ef5f83f16c881a934842d9887 *NAMESPACE
 b02ecd42299c78542482e12873d06559 *R/RcppExports.R
 d5a5893c75b01e47550e476205caa0f5 *R/data.R
@@ -26,7 +26,7 @@ ea5044081c9ae7667f0a3a07ed2b62cf *inst/extdata/copenhagen_raw.rds
 3a4e6b2715649977cad7be135e0899f0 *inst/include/iglm/helper_functions.h
 1a5385281bbd8fbb17061b966afc3c3a *inst/include/iglm/network_class.h
 5d2f2eb33fd3e892165a6d8857b06ba8 *inst/include/iglm/xyz_class.h
-4510b9d79819102f0402be0308e48849 *inst/include/iglm/xz_class.h
+6251759a94fc2f34ca8a4f55bab989bd *inst/include/iglm/xz_class.h
 9d38c0acd52671f7c3acf0d2dfeab199 *man/InitIglmTerm.Rd
 7d44c481b0673127eeb31d2f4880adea *man/check.IglmTerm.Rd
 51e7cdb2ee8e4b15c888bc91e9106d9e *man/control.iglm.Rd
@@ -50,9 +50,9 @@ a958f2aaf8bd8aa69b7f28ecf360044a *man/simulate_iglm.Rd
 c7482ce529b429736de92b3e653b3e44 *src/Makevars.win
 7b4aa926d48fcdbe26e12956e96c5889 *src/RcppExports.cpp
 c13a812d9115f138e729a83ed51ad7f1 *src/api_usage.cpp
-527d2aa7d99c509399ba2dfc1f7de668 *src/change_statistics.cpp
+d42818b4764d26b2a9e8a68bac96ea6f *src/change_statistics.cpp
 9ed07868331247950b8aebb15eae4829 *src/extension_api.cpp
-1306286905689cf2daf8b8e2c24f10df *src/iglm_classes.cpp
+627cc5b10b6785fcb066d01a09116c8f *src/iglm_classes.cpp
 ad56e4fc9877c9446fca0d4cb37ddaec *src/xyz_sampling.cpp
 b1bdfde477f11d896ec3c421b7e692c7 *tests/testthat.R
 83e4641e023640f1235ab027e2145087 *tests/testthat/test-cpp_optimizations.R
