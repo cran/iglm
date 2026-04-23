@@ -3,7 +3,7 @@
 \name{iglm}
 \alias{iglm}
 \alias{iglm.object}
-\title{Construct a iglm Model Specification Object}
+\title{Construct an iglm Model Specification Object}
 \usage{
 iglm(
   formula = NULL,
@@ -82,7 +82,6 @@ all model terms via the formula interface.
 
 \examples{
 # Example usage:
-library(iglm)
 # Create a iglm.data data object (example)
 n_actor <- 50
 neighborhood <- matrix(1, nrow = n_actor, ncol = n_actor)
@@ -96,9 +95,9 @@ gt_coef_pop <- rnorm(n = n_actor, -2, 1)
 # Define MCMC sampler
 sampler_new <- sampler.iglm(
   n_burn_in = 100, n_simulation = 10,
-  sampler_x = sampler.net.attr(n_proposals = n_actor * 10, seed = 13),
-  sampler_y = sampler.net.attr(n_proposals = n_actor * 10, seed = 32),
-  sampler_z = sampler.net.attr(n_proposals = sum(neighborhood > 0) * 10, seed = 134),
+  sampler_x = sampler.net.attr(n_proposals = n_actor * 10),
+  sampler_y = sampler.net.attr(n_proposals = n_actor * 10),
+  sampler_z = sampler.net.attr(n_proposals = sum(neighborhood > 0) * 10),
   init_empty = FALSE
 )
 # Create iglm model specification
@@ -122,7 +121,7 @@ model_tmp_new$estimate()
 
 # Model Assessment
 model_tmp_new$assess(formula = ~degree_distribution)
-# model_tmp_new$results$plot(assess = TRUE)
+model_tmp_new$results$plot(model_assessment = TRUE)
 
 }
 \references{

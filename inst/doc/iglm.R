@@ -3,11 +3,10 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  out.width = "100%"
+  out.width = "100%",
+  fig.width = 7, 
+  fig.height = 5
 )
-library(iglm)
-
-## -----------------------------------------------------------------------------
 library(iglm)
 
 ## -----------------------------------------------------------------------------
@@ -46,20 +45,20 @@ formula <- object ~ edges + attribute_y + attribute_x + degrees
 ## -----------------------------------------------------------------------------
 # Parameters of edges(mode = "local"), attribute_y, and attribute_x
 gt_coef <- c(3, -1, -1)
-# Parameters for popularity effect
-gt_coef_pop <- c(rnorm(n = n_actor, -2, 1))
+# Parameters for degree effect
+gt_coef_degrees <- c(rnorm(n = n_actor, -2, 1))
 # Define the sampler
 sampler_tmp <- sampler.iglm(
   n_burn_in = 100, n_simulation = 10,
-  sampler_x = sampler.net.attr(n_proposals = n_actor * 10, seed = 13),
-  sampler_y = sampler.net.attr(n_proposals = n_actor * 10, seed = 32),
-  sampler_z = sampler.net.attr(n_proposals = sum(neighborhood > 0) * 10, seed = 134),
+  sampler_x = sampler.net.attr(n_proposals = n_actor * 10),
+  sampler_y = sampler.net.attr(n_proposals = n_actor * 10),
+  sampler_z = sampler.net.attr(n_proposals = sum(neighborhood > 0) * 10),
   init_empty = F
 )
 
 model_tmp_new <- iglm(
   formula = formula,
-  coef = gt_coef, coef_degrees = gt_coef_pop, sampler = sampler_tmp,
+  coef = gt_coef, coef_degrees = gt_coef_degrees, sampler = sampler_tmp,
   control = control.iglm(accelerated = F, max_it = 200, display_progress = F)
 )
 
