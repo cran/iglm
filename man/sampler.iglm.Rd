@@ -10,7 +10,7 @@ sampler.iglm(
   sampler_z = NULL,
   n_simulation = 100,
   n_burn_in = 10,
-  init_empty = TRUE,
+  init_empty = FALSE,
   seed = NA,
   cluster = NULL,
   file = NULL
@@ -34,12 +34,12 @@ after the burn-in period. Default: 100. Must be non-negative.}
 \item{n_burn_in}{(integer) The number of MCMC iterations to discard at the
 start for burn-in. Default: 10. Must be non-negative.}
 
-\item{init_empty}{(logical) If `TRUE` (default), initialize the MCMC chain
-from an empty state.}
+\item{init_empty}{(logical) If `FALSE` (default), the MCMC chain is initialized
+from observed data. If `TRUE`, initialize the MCMC chain from an empty state.}
 
 \item{seed}{(integer or `NA`) A single integer seed set once before sampling
-begins to ensure reproducibility. If `NA` (default), a random seed is
-generated automatically.}
+begins to ensure reproducibility. If `NA` (default), a fixed default seed
+(`123456789`) is used.}
 
 \item{cluster}{A parallel cluster object (e.g., from `parallel::makeCluster()`)
 for parallel simulations. If `NULL` (default), simulations run sequentially.}
@@ -61,13 +61,13 @@ This function provides a convenient way to specify these settings before
 passing them to the `iglm` constructor or simulation functions.
 }
 \examples{
-n_actor <- 50
+n_units <- 50
 sampler_new <- sampler.iglm(
   n_burn_in = 100, n_simulation = 10,
   seed = 42,
-  sampler_x = sampler.net.attr(n_proposals = n_actor * 10),
-  sampler_y = sampler.net.attr(n_proposals = n_actor * 10),
-  sampler_z = sampler.net.attr(n_proposals = n_actor^2, tnt = TRUE),
+  sampler_x = sampler.net.attr(n_proposals = n_units * 10),
+  sampler_y = sampler.net.attr(n_proposals = n_units * 10),
+  sampler_z = sampler.net.attr(n_proposals = n_units^2, tnt = TRUE),
   init_empty = FALSE
 )
 sampler_new

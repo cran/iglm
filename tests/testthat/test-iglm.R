@@ -14,10 +14,10 @@ test_that("Define a iglm object, simulate, estimate, assess", {
     neighborhood[(1 + size_overlap * i):(size_neighborhood + size_overlap * i), (1 + size_overlap * i):(size_neighborhood + size_overlap * i)] <- 1
   }
   neighborhood[(n_actor - size_neighborhood + 1):(n_actor), (n_actor - size_neighborhood + 1):(n_actor)] <- 1
-  type_x <- "binomial"
-  type_y <- "binomial"
+  family_x <- "binomial"
+  family_y <- "binomial"
 
-  xyz_obj_new <- iglm.data(neighborhood = neighborhood, directed = FALSE, type_x = type_x, type_y = type_y)
+  xyz_obj_new <- iglm.data(neighborhood = neighborhood, directed = FALSE, family_x = family_x, family_y = family_y)
   gt_coef <- c(3, -1, -1)
   gt_coef_pop <- c(rnorm(n = n_actor, -2, 1))
 
@@ -98,3 +98,108 @@ test_that("Define a iglm object, simulate, estimate, assess", {
 
   file.remove(tmp_name)
 })
+
+test_that("iglm throws error when covariate object does not exist", {
+  n_actor <- 4
+  z <- matrix(0, n_actor, n_actor)
+  x <- c(0, 1, 1, 0)
+  y <- c(1, 0, 1, 0)
+  data_obj <- iglm.data(x_attribute = x, y_attribute = y, z_network = z, n_units = 4, family_x = "binomial", family_y = "binomial")
+
+  expect_error(
+    iglm(
+      formula = data_obj ~ cov_x(data = non_existent_covariate_var),
+      coef = c(1),
+      sampler = sampler.iglm(n_burn_in = 2, n_simulation = 1, init_empty = FALSE)
+    ),
+    pattern = "Could not evaluate argument 'data' in term 'cov_x': object 'non_existent_covariate_var' not found"
+  )
+
+  expect_error(
+    iglm(
+      formula = data_obj ~ cov_x(non_existent_covariate_var),
+      coef = c(1),
+      sampler = sampler.iglm(n_burn_in = 2, n_simulation = 1, init_empty = FALSE)
+    ),
+    pattern = "Could not evaluate argument '..1' in term 'cov_x': object 'non_existent_covariate_var' not found"
+  )
+
+  expect_error(
+    iglm(
+      formula = data_obj ~ cov_x(data = stop("custom error message")),
+      coef = c(1),
+      sampler = sampler.iglm(n_burn_in = 2, n_simulation = 1, init_empty = FALSE)
+    ),
+    pattern = "Could not evaluate argument 'data' in term 'cov_x': custom error message"
+  )
+
+  # Finite coefficient checks
+  expect_error(
+    iglm(
+      formula = data_obj ~ edges(mode = "local"),
+      coef = c(NA),
+      sampler = sampler.iglm(n_burn_in = 2, n_simulation = 1, init_empty = FALSE)
+    ),
+    pattern = "coef.*must contain finite numeric values"
+  )
+
+  # Empty formula RHS check
+  expect_error(
+    iglm(
+      formula = data_obj ~ 1,
+      coef = c(1)
+    ),
+    pattern = "Formula must contain at least one term"
+  )
+
+  # Control parameter bounds & type checks
+  expect_error(
+    control.iglm(max_it = 10.5),
+    pattern = "`max_it` must be a positive integer"
+  )
+  expect_error(
+    control.iglm(max_it = Inf),
+    pattern = "`max_it` must be a positive integer"
+  )
+  expect_error(
+    control.iglm(tol = Inf),
+    pattern = "`tol` must be a positive number"
+  )
+  expect_error(
+    control.iglm(offset_nonoverlap = Inf),
+    pattern = "`offset_nonoverlap` must be a single numeric value"
+  )
+
+  # Pure degree model check
+  m_degrees_only <- iglm(
+    formula = data_obj ~ degrees,
+    sampler = sampler.iglm(n_burn_in = 2, n_simulation = 2, init_empty = FALSE),
+    control = control.iglm(max_it = 2, display_progress = FALSE, var_method = "Godambe")
+  )
+  expect_equal(inherits(m_degrees_only, "iglm.object"), TRUE)
+  expect_no_error(m_degrees_only$estimate())
+  expect_equal(dim(m_degrees_only$results$var), c(0, 0))
+
+  # Pure degree model with Mean-value variance method
+  m_degrees_updated <- iglm(
+    formula = data_obj ~ degrees,
+    sampler = sampler.iglm(n_burn_in = 2, n_simulation = 2, init_empty = FALSE),
+    control = control.iglm(max_it = 2, display_progress = FALSE, var_method = "Mean-value")
+  )
+  expect_no_error(m_degrees_updated$estimate())
+  expect_equal(dim(m_degrees_updated$results$var), c(0, 0))
+
+  # Test assess removes non-distribution terms like geodesic_distances, dsp, geo, geodist, esp
+  expect_warning(
+    m_degrees_updated$assess(formula = ~ degree_distribution + geodesic_distances, plot = FALSE),
+    pattern = "Unrecognized terms deleted: geodesic_distances"
+  )
+  expect_warning(
+    m_degrees_updated$assess(formula = ~ degree_distribution + dsp + geo + geodist + esp, plot = FALSE),
+    pattern = "Unrecognized terms deleted: dsp, geo, geodist, esp"
+  )
+})
+
+
+
+

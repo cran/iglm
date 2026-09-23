@@ -90,7 +90,8 @@ and control objects, calculating initial statistics, and validating.
   sampler = NULL,
   control = NULL,
   name = NULL,
-  file = NULL
+  file = NULL,
+  ...
 )}
     \if{html}{\out{</div>}}
   }
@@ -114,6 +115,7 @@ parameters. If `NULL`, default settings are used.}
 would be used in plots and model assessment.}
       \item{\code{file}}{(character or `NULL`) If provided, loads the sampler state from
 the specified .rds file instead of initializing from parameters.}
+      \item{\code{...}}{Additional arguments. Unrecognized arguments will trigger informative errors.}
     }
     \if{html}{\out{</div>}}
   }
@@ -199,6 +201,7 @@ available, they are printed in a standard coefficient table format.
   print.fitinfo = TRUE,
   print.coefmat = TRUE,
   print.call = TRUE,
+  canonical_names = FALSE,
   ...
 )}
     \if{html}{\out{</div>}}
@@ -215,12 +218,10 @@ only the corresponding columns are printed (1: Estimate, 2: S.E., 3: t-value, 4:
       \item{\code{print.fitinfo}}{(logical) If `TRUE` (default), prints information about the estimation results.}
       \item{\code{print.coefmat}}{(logical) If `TRUE` (default), prints the coefficient table.}
       \item{\code{print.call}}{(logical) If `TRUE` (default), prints the call that generated the object.}
+      \item{\code{canonical_names}}{(logical) If `TRUE`, prints canonical term names without label substitution. Default is `FALSE`.}
       \item{\code{...}}{Additional arguments passed to \code{\link{printCoefmat}}.}
     }
     \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Prints the summary/object to the console and returns the coefficient matrix invisibly (or `NULL` if the model has not been estimated).
   }
 }
 
@@ -232,7 +233,7 @@ only the corresponding columns are printed (1: Estimate, 2: S.E., 3: t-value, 4:
 paths and model assessment diagnostics if available.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.object$plot(stats = FALSE, trace = FALSE, model_assessment = FALSE)}
+    \preformatted{iglm.object$plot(stats = FALSE, trace = FALSE, model_assessment = FALSE, ...)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -244,6 +245,8 @@ statistics from model assessment. Default is `FALSE`.}
 paths. Default is `FALSE`.}
       \item{\code{model_assessment}}{(logical) If `TRUE`, plot diagnostics from the
 model assessment (if already carried out). Default is `FALSE`.}
+      \item{\code{...}}{If the plot of the model_assessment is wanted, additional fits with identical model_assessment terms are currently identified from this argument.
+The names of the arguments are shown as the legend in the model assessment plots.}
     }
     \if{html}{\out{</div>}}
   }
@@ -361,24 +364,23 @@ Stores the results internally and updates the coefficient fields.
 \if{html}{\out{<a id="method-iglm.object-summary"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.object-summary}{}}}
 \subsection{\code{iglm.object$summary()}}{
-  Provides a summary of the estimation results with the following columns: Estimate, SE,
-t-value, and Pr(>|t|).
-Requires the model to have been estimated first.
+  Provides a summary of the estimation results. Requires the model to have been estimated first.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.object$summary(digits = 2, ...)}
+    \preformatted{iglm.object$summary(digits = 2, canonical_names = FALSE, ...)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{digits}}{(integer) Number of digits for rounding numeric output.}
+      \item{\code{digits}}{(integer) Number of digits for rounding numeric output. Default is 2.}
+      \item{\code{canonical_names}}{(logical) If `TRUE`, print canonical term names without label substitution. Default is `FALSE`.}
       \item{\code{...}}{Additional arguments passed to \code{\link{printCoefmat}}.}
     }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    Prints the summary to the console and returns the coefficient matrix invisibly (or `NULL` if the model has not been estimated).
+    Prints the summary to the console and invisibly returns the coefficient table (or \code{NULL} if the model has not been estimated).
   }
 }
 
@@ -473,7 +475,7 @@ estimated coefficients \eqn{\hat{\theta}}:
 \itemize{
   \item For \strong{Binomial} families: \eqn{\mu = (1 + \exp(-\eta))^{-1}} (Logistic).
   \item For \strong{Poisson} families: \eqn{\mu = \exp(\eta)} (Exponential).
-  \item For \strong{Gaussian} families: \eqn{\mu = \eta} (Identity).
+  \item For \strong{Normal} families: \eqn{\mu = \eta} (Identity).
 }
 For the network component \code{z}, the linear predictor includes dyadic covariates,
 degrees effects (sender/receiver variances), and structural offsets.
@@ -481,7 +483,7 @@ degrees effects (sender/receiver variances), and structural offsets.
   \subsection{Returns}{
     A list containing the requested predictions:
 \describe{
-  \item{\code{x}, \code{y}}{A matrix or data frame where the first column is the actor ID and subsequent
+  \item{\code{x}, \code{y}}{A matrix or data frame where the first column is the unit ID and subsequent
   columns represent the predicted mean values.}
   \item{\code{z}}{A data frame containing the edgelist with columns: \code{sender}, \code{receiver},
   and \code{prediction} (probability or intensity).}
@@ -571,7 +573,7 @@ count statistics and re-validates the object.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{x}}{A \code{\link{iglm.data}} `` object containing the new observed data.}
+      \item{\code{x}}{A \code{\link{iglm.data}} object containing the new observed data.}
     }
     \if{html}{\out{</div>}}
   }

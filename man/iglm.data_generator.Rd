@@ -8,9 +8,50 @@
 The `iglm.data` class is a container for storing, validating, and analyzing
 unit-level attributes (x_attribute, y_attribute) and connections (z_network).
 }
+\examples{
+
+## ------------------------------------------------
+## Method `iglm.data$degree_distribution()`
+## ------------------------------------------------
+
+data(copenhagen)
+
+# Overall degree distribution
+copenhagen$degree_distribution(prob = FALSE, plot = FALSE)
+
+# Spillover degree distribution (female to male call connections)
+copenhagen$deg_dist(
+  x_i = 1, # Sender: female
+  x_j = 0, # Receiver: male
+  mode = "local",
+  plot = FALSE
+)
+
+## ------------------------------------------------
+## Method `iglm.data$degree()`
+## ------------------------------------------------
+
+data(copenhagen)
+
+# Global degree sequence
+copenhagen$degree()
+
+# Local spillover degree sequence with filtering functions
+copenhagen$deg(
+  x_i = function(x) x > 2,
+  y_j = function(y) y > 2,
+  mode = "local"
+)
+}
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
   \describe{
+    \item{\code{label_x}}{(`character`) Label/name for `x_attribute`.}
+
+    \item{\code{label_y}}{(`character`) Label/name for `y_attribute`.}
+
+    \item{\code{label_z}}{(`character`) Label/name for `z_network`.}
+
     \item{\code{x_attribute}}{(`numeric`) The vector for the first unit-level attribute.}
 
     \item{\code{y_attribute}}{(`numeric`) The vector for the second unit-level attribute.}
@@ -23,11 +64,13 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
 
     \item{\code{directed}}{(`logical`) Indicates if the `z_network` is treated as directed.}
 
-    \item{\code{n_actor}}{(`integer`) The total number of actors (nodes) in the network.}
+    \item{\code{n_units}}{(`integer`) The total number of units (nodes) in the network.}
 
-    \item{\code{type_x}}{(`character`) The specified distribution type for the `x_attribute`.}
+    \item{\code{n_actor}}{(`integer`) Deprecated alias for `n_units`.}
 
-    \item{\code{type_y}}{(`character`) The specified distribution type for the `y_attribute`.}
+    \item{\code{family_x}}{(`character`) The specified distribution family for the `x_attribute`.}
+
+    \item{\code{family_y}}{(`character`) The specified distribution family for the `y_attribute`.}
 
     \item{\code{scale_x}}{(`numeric`) The scale parameter associated with the `x_attribute`.}
 
@@ -48,12 +91,15 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
   \itemize{
     \item \href{#method-iglm.data-initialize}{\code{iglm.data$new()}}
     \item \href{#method-iglm.data-set_z_network}{\code{iglm.data$set_z_network()}}
-    \item \href{#method-iglm.data-set_type_x}{\code{iglm.data$set_type_x()}}
-    \item \href{#method-iglm.data-set_type_y}{\code{iglm.data$set_type_y()}}
+    \item \href{#method-iglm.data-set_family_x}{\code{iglm.data$set_family_x()}}
+    \item \href{#method-iglm.data-set_family_y}{\code{iglm.data$set_family_y()}}
     \item \href{#method-iglm.data-set_scale_x}{\code{iglm.data$set_scale_x()}}
     \item \href{#method-iglm.data-set_scale_y}{\code{iglm.data$set_scale_y()}}
     \item \href{#method-iglm.data-set_x_attribute}{\code{iglm.data$set_x_attribute()}}
     \item \href{#method-iglm.data-set_y_attribute}{\code{iglm.data$set_y_attribute()}}
+    \item \href{#method-iglm.data-set_label_x}{\code{iglm.data$set_label_x()}}
+    \item \href{#method-iglm.data-set_label_y}{\code{iglm.data$set_label_y()}}
+    \item \href{#method-iglm.data-set_label_z}{\code{iglm.data$set_label_z()}}
     \item \href{#method-iglm.data-gather}{\code{iglm.data$gather()}}
     \item \href{#method-iglm.data-set_fix_z_alocal}{\code{iglm.data$set_fix_z_alocal()}}
     \item \href{#method-iglm.data-delete_isolates}{\code{iglm.data$delete_isolates()}}
@@ -64,17 +110,28 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
     \item \href{#method-iglm.data-mean_x}{\code{iglm.data$mean_x()}}
     \item \href{#method-iglm.data-mean_y}{\code{iglm.data$mean_y()}}
     \item \href{#method-iglm.data-x_distribution}{\code{iglm.data$x_distribution()}}
+    \item \href{#method-iglm.data-x_dist}{\code{iglm.data$x_dist()}}
     \item \href{#method-iglm.data-y_distribution}{\code{iglm.data$y_distribution()}}
+    \item \href{#method-iglm.data-y_dist}{\code{iglm.data$y_dist()}}
     \item \href{#method-iglm.data-edgewise_shared_partner}{\code{iglm.data$edgewise_shared_partner()}}
     \item \href{#method-iglm.data-set_neighborhood_overlap}{\code{iglm.data$set_neighborhood_overlap()}}
     \item \href{#method-iglm.data-dyadwise_shared_partner}{\code{iglm.data$dyadwise_shared_partner()}}
     \item \href{#method-iglm.data-geodesic_distances_distribution}{\code{iglm.data$geodesic_distances_distribution()}}
     \item \href{#method-iglm.data-geodesic_distances}{\code{iglm.data$geodesic_distances()}}
+    \item \href{#method-iglm.data-esp}{\code{iglm.data$esp()}}
+    \item \href{#method-iglm.data-esp_dist}{\code{iglm.data$esp_dist()}}
+    \item \href{#method-iglm.data-dsp}{\code{iglm.data$dsp()}}
+    \item \href{#method-iglm.data-dsp_dist}{\code{iglm.data$dsp_dist()}}
+    \item \href{#method-iglm.data-geo}{\code{iglm.data$geo()}}
+    \item \href{#method-iglm.data-geodist}{\code{iglm.data$geodist()}}
+    \item \href{#method-iglm.data-geo_dist}{\code{iglm.data$geo_dist()}}
     \item \href{#method-iglm.data-edgewise_shared_partner_distribution}{\code{iglm.data$edgewise_shared_partner_distribution()}}
     \item \href{#method-iglm.data-dyadwise_shared_partner_distribution}{\code{iglm.data$dyadwise_shared_partner_distribution()}}
     \item \href{#method-iglm.data-degree_distribution}{\code{iglm.data$degree_distribution()}}
     \item \href{#method-iglm.data-degree}{\code{iglm.data$degree()}}
-    \item \href{#method-iglm.data-spillover_degree_distribution}{\code{iglm.data$spillover_degree_distribution()}}
+    \item \href{#method-iglm.data-deg}{\code{iglm.data$deg()}}
+    \item \href{#method-iglm.data-deg_dist}{\code{iglm.data$deg_dist()}}
+    \item \href{#method-iglm.data-degree_dist}{\code{iglm.data$degree_dist()}}
     \item \href{#method-iglm.data-plot}{\code{iglm.data$plot()}}
     \item \href{#method-iglm.data-print}{\code{iglm.data$print()}}
     \item \href{#method-iglm.data-clone}{\code{iglm.data$clone()}}
@@ -93,16 +150,20 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
   z_network = NULL,
   neighborhood = NULL,
   directed = NA,
-  n_actor = NA,
-  type_x = "binomial",
-  type_y = "binomial",
+  n_units = NA,
+  family_x = "binomial",
+  family_y = "binomial",
   scale_x = 1,
   scale_y = 1,
   fix_x = FALSE,
   fix_z = FALSE,
   fix_z_alocal = TRUE,
   return_neighborhood = TRUE,
-  file = NULL
+  file = NULL,
+  label_x = "x",
+  label_y = "y",
+  label_z = "z",
+  n_actor = NULL
 )}
     \if{html}{\out{</div>}}
   }
@@ -115,18 +176,18 @@ unit-level attributes (x_attribute, y_attribute) and connections (z_network).
 edgelist or a square adjacency matrix.}
       \item{\code{neighborhood}}{An optional matrix for the neighborhood representing local dependence.
 Can be a 2-column edgelist or a square adjacency matrix.
-A tie in `neighborhood` between actor i and j indicates that j is in the neighborhood of i,
-implying dependence between the respective actors.}
+A tie in `neighborhood` between unit i and j indicates that j is in the neighborhood of i,
+implying dependence between the respective units.}
       \item{\code{directed}}{A logical value indicating if `z_network` is directed.
 If `NA` (default), directedness is inferred from the symmetry of
 `z_network`.}
-      \item{\code{n_actor}}{An integer for the number of actors in the system.
-If `NA` (default), `n_actor` is inferred from the attributes or
+      \item{\code{n_units}}{An integer for the number of units in the system.
+If `NA` (default), `n_units` is inferred from the attributes or
 network matrices.}
-      \item{\code{type_x}}{Character string for the type of `x_attribute`.
+      \item{\code{family_x}}{Character string for the family of `x_attribute`.
 Must be one of `"binomial"`, `"poisson"`, or `"normal"`.
 Default is `"binomial"`.}
-      \item{\code{type_y}}{Character string for the type of `y_attribute`.
+      \item{\code{family_y}}{Character string for the family of `y_attribute`.
 Must be one of `"binomial"`, `"poisson"`, or `"normal"`.
 Default is `"binomial"`.}
       \item{\code{scale_x}}{A positive numeric value for scaling (e.g., variance
@@ -142,6 +203,10 @@ during model estimation and simulation. Default is `FALSE`.}
 `neighborhood` is `NULL`, a full neighborhood (all dyads) is
 generated implying global dependence. If `FALSE`, no neighborhood is set.}
       \item{\code{file}}{(character) Optional file path to load a saved `iglm.data` object state.}
+      \item{\code{label_x}}{Character string for the label/name of `x_attribute`. Default is `"x"`.}
+      \item{\code{label_y}}{Character string for the label/name of `y_attribute`. Default is `"y"`.}
+      \item{\code{label_z}}{Character string for the label/name of `z_network`. Default is `"z"`.}
+      \item{\code{n_actor}}{(Deprecated) An integer for the number of units. Please use \code{n_units} instead.}
     }
     \if{html}{\out{</div>}}
   }
@@ -172,19 +237,19 @@ edgelist or a square adjacency matrix.
 }
 
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-iglm.data-set_type_x"></a>}}
-\if{latex}{\out{\hypertarget{method-iglm.data-set_type_x}{}}}
-\subsection{\code{iglm.data$set_type_x()}}{
-  Sets the `type_x` of the `iglm.data` object.
+\if{html}{\out{<a id="method-iglm.data-set_family_x"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-set_family_x}{}}}
+\subsection{\code{iglm.data$set_family_x()}}{
+  Sets the `family_x` of the `iglm.data` object.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$set_type_x(type_x)}
+    \preformatted{iglm.data$set_family_x(family_x)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{type_x}}{A character string for the type of `x_attribute`.
+      \item{\code{family_x}}{A character string for the family of `x_attribute`.
 Must be one of `"binomial"`, `"poisson"`, or `"normal"`.
 @return The `iglm.data` object itself (`self`), invisibly.}
     }
@@ -193,19 +258,19 @@ Must be one of `"binomial"`, `"poisson"`, or `"normal"`.
 }
 
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-iglm.data-set_type_y"></a>}}
-\if{latex}{\out{\hypertarget{method-iglm.data-set_type_y}{}}}
-\subsection{\code{iglm.data$set_type_y()}}{
-  Sets the `type_y` of the `iglm.data` object.
+\if{html}{\out{<a id="method-iglm.data-set_family_y"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-set_family_y}{}}}
+\subsection{\code{iglm.data$set_family_y()}}{
+  Sets the `family_y` of the `iglm.data` object.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$set_type_y(type_y)}
+    \preformatted{iglm.data$set_family_y(family_y)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{type_y}}{A character string for the type of `y_attribute`.
+      \item{\code{family_y}}{A character string for the family of `y_attribute`.
 Must be one of `"binomial"`, `"poisson"`, or `"normal"`.}
     }
     \if{html}{\out{</div>}}
@@ -306,6 +371,72 @@ for "normal" type).}
 }
 
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-set_label_x"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-set_label_x}{}}}
+\subsection{\code{iglm.data$set_label_x()}}{
+  Sets the label for the `x_attribute`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$set_label_x(label_x)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{label_x}}{A character string for the label of `x_attribute`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    The `iglm.data` object itself (`self`), invisibly.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-set_label_y"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-set_label_y}{}}}
+\subsection{\code{iglm.data$set_label_y()}}{
+  Sets the label for the `y_attribute`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$set_label_y(label_y)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{label_y}}{A character string for the label of `y_attribute`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    The `iglm.data` object itself (`self`), invisibly.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-set_label_z"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-set_label_z}{}}}
+\subsection{\code{iglm.data$set_label_z()}}{
+  Sets the label for the `z_network`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$set_label_z(label_z)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{label_z}}{A character string for the label of `z_network`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    The `iglm.data` object itself (`self`), invisibly.
+  }
+}
+
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-iglm.data-gather"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.data-gather}{}}}
 \subsection{\code{iglm.data$gather()}}{
@@ -346,7 +477,7 @@ details necessary to reconstruct the object later.
 \if{latex}{\out{\hypertarget{method-iglm.data-delete_isolates}{}}}
 \subsection{\code{iglm.data$delete_isolates()}}{
   Deletes isolates from the `z_network` and updates the attributes and neighborhood accordingly.
-Isolates are actors that do not have any connections in the `z_network`. This method identifies such actors, removes them from the attributes and neighborhood, and updates the `z_network` to reflect the new actor indices.
+Isolates are units that do not have any connections in the `z_network`. This method identifies such units, removes them from the attributes and neighborhood, and updates the `z_network` to reflect the new unit indices.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{iglm.data$delete_isolates()}
@@ -495,6 +626,30 @@ details necessary to reconstruct the object later.
 }
 
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-x_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-x_dist}{}}}
+\subsection{\code{iglm.data$x_dist()}}{
+  Short alias for `x_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$x_dist(value_range = NULL, prob = TRUE, plot = TRUE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{value_range}}{(numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.}
+      \item{\code{plot}}{(logical) If `TRUE` (default), plots the distribution.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A numeric vector representing the distribution of `x_attribute` (invisible).
+  }
+}
+
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-iglm.data-y_distribution"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.data-y_distribution}{}}}
 \subsection{\code{iglm.data$y_distribution()}}{
@@ -519,6 +674,30 @@ details necessary to reconstruct the object later.
 }
 
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-y_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-y_dist}{}}}
+\subsection{\code{iglm.data$y_dist()}}{
+  Short alias for `y_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$y_dist(value_range = NULL, prob = TRUE, plot = TRUE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{value_range}}{(numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.}
+      \item{\code{plot}}{(logical) If `TRUE` (default), plots the distribution.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A numeric vector representing the distribution of `y_attribute` (invisible).
+  }
+}
+
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-iglm.data-edgewise_shared_partner"></a>}}
 \if{latex}{\out{\hypertarget{method-iglm.data-edgewise_shared_partner}{}}}
 \subsection{\code{iglm.data$edgewise_shared_partner()}}{
@@ -526,7 +705,14 @@ details necessary to reconstruct the object later.
 This is a two-path matrix (e.g., $A A^T$ or $A^T A$).
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$edgewise_shared_partner(type = "ALL")}
+    \preformatted{iglm.data$edgewise_shared_partner(
+  type = "ALL",
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -541,11 +727,17 @@ Must be one of:
 `"ITP"` (Incoming Two-Path, \eqn{z_{i,j}\, z_{h,i} \, z_{j,h}}),
 `"ALL"` (Any one of the above).
 Default is `"ALL"`.}
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all edges,
+or `"local"` to evaluate only edges with overlapping neighborhoods (from `overlap`).}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
     }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    A sparse matrix (`dgCMatrix`) of shared partner counts.
+    A numeric vector of shared partner counts for edges.
   }
 }
 
@@ -581,7 +773,14 @@ Can be a 2-column edgelist or a square adjacency matrix.}
   Calculates the matrix of dyadwise shared partners.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$dyadwise_shared_partner(type = "ALL")}
+    \preformatted{iglm.data$dyadwise_shared_partner(
+  type = "ALL",
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -596,6 +795,12 @@ Must be one of:
 `"ITP"` (Incoming Two-Path, \eqn{z_{h,i} \, z_{j,h}}),
 `"ALL"` (Any one of the above).
 Default is `"ALL"`.}
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all dyads,
+or `"local"` to evaluate only dyads with overlapping neighborhoods.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
     }
     \if{html}{\out{</div>}}
   }
@@ -615,7 +820,12 @@ Default is `"ALL"`.}
     \preformatted{iglm.data$geodesic_distances_distribution(
   value_range = NULL,
   prob = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
 )}
     \if{html}{\out{</div>}}
   }
@@ -628,6 +838,12 @@ is inferred from the data.}
       \item{\code{prob}}{(logical) If `TRUE` (default), returns a probability
 distribution (proportions). If `FALSE`, returns raw counts.}
       \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all node pairs,
+or `"local"` to evaluate only pairs with overlapping neighborhoods (from `overlap`).}
     }
     \if{html}{\out{</div>}}
   }
@@ -645,12 +861,274 @@ distribution (proportions). If `FALSE`, returns raw counts.}
 symmetrized `z_network` using a matrix-based BFS algorithm.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$geodesic_distances()}
+    \preformatted{iglm.data$geodesic_distances(
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all pairs,
+or `"local"` to evaluate only pairs with overlapping neighborhoods.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+    }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
     A sparse matrix (`dgCMatrix`) where `D[i, j]` is the
   shortest path distance from i to j. `Inf` indicates no path.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-esp"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-esp}{}}}
+\subsection{\code{iglm.data$esp()}}{
+  Short alias for `edgewise_shared_partner`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$esp(
+  type = "ALL",
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(character) The type of two-path to calculate. Default is `"ALL"`.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A numeric vector of shared partner counts for edges.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-esp_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-esp_dist}{}}}
+\subsection{\code{iglm.data$esp_dist()}}{
+  Short alias for `edgewise_shared_partner_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$esp_dist(
+  type = "ALL",
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(character) The type of two-path to calculate. Default is `"ALL"`.}
+      \item{\code{value_range}}{(numeric vector) Range of counts to tabulate.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns proportions.}
+      \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A named vector with the distribution.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-dsp"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-dsp}{}}}
+\subsection{\code{iglm.data$dsp()}}{
+  Short alias for `dyadwise_shared_partner`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$dsp(
+  type = "ALL",
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(character) The type of two-path to calculate. Default is `"ALL"`.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A sparse matrix (`dgCMatrix`) of shared partner counts.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-dsp_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-dsp_dist}{}}}
+\subsection{\code{iglm.data$dsp_dist()}}{
+  Short alias for `dyadwise_shared_partner_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$dsp_dist(
+  type = "ALL",
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(character) The type of two-path to calculate. Default is `"ALL"`.}
+      \item{\code{value_range}}{(numeric vector) Range of counts to tabulate.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns proportions.}
+      \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A named vector with the distribution.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-geo"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-geo}{}}}
+\subsection{\code{iglm.data$geo()}}{
+  Short alias for `geodesic_distances`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$geo(mode = "global", x_i = NULL, x_j = NULL, y_i = NULL, y_j = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A sparse matrix (`dgCMatrix`) of geodesic distances.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-geodist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-geodist}{}}}
+\subsection{\code{iglm.data$geodist()}}{
+  Short alias for `geodesic_distances`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$geodist(
+  mode = "global",
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A sparse matrix (`dgCMatrix`) of geodesic distances.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-geo_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-geo_dist}{}}}
+\subsection{\code{iglm.data$geo_dist()}}{
+  Short alias for `geodesic_distances_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$geo_dist(
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{value_range}}{(numeric vector) Range of distances to tabulate.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns proportions.}
+      \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A named vector with the distribution.
   }
 }
 
@@ -665,7 +1143,12 @@ symmetrized `z_network` using a matrix-based BFS algorithm.
   type = "ALL",
   value_range = NULL,
   prob = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
 )}
     \if{html}{\out{</div>}}
   }
@@ -680,6 +1163,12 @@ is inferred from the data.}
       \item{\code{prob}}{(logical) If `TRUE` (default), returns a probability
 distribution (proportions). If `FALSE`, returns raw counts.}
       \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all edges,
+or `"local"` to evaluate only edges with overlapping neighborhoods.}
     }
     \if{html}{\out{</div>}}
   }
@@ -700,7 +1189,12 @@ distribution (proportions). If `FALSE`, returns raw counts.}
   type = "ALL",
   value_range = NULL,
   prob = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
 )}
     \if{html}{\out{</div>}}
   }
@@ -715,6 +1209,12 @@ is inferred from the data.}
       \item{\code{prob}}{(logical) If `TRUE` (default), returns a probability
 distribution (proportions). If `FALSE`, returns raw counts.}
       \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{(optional) Sender attribute constraint.}
+      \item{\code{x_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{y_i}}{(optional) Sender attribute constraint.}
+      \item{\code{y_j}}{(optional) Receiver attribute constraint.}
+      \item{\code{mode}}{(character) Either `"global"` (default) to evaluate across all dyads,
+or `"local"` to evaluate only dyads with overlapping neighborhoods.}
     }
     \if{html}{\out{</div>}}
   }
@@ -729,27 +1229,114 @@ distribution (proportions). If `FALSE`, returns raw counts.}
 \if{latex}{\out{\hypertarget{method-iglm.data-degree_distribution}{}}}
 \subsection{\code{iglm.data$degree_distribution()}}{
   Calculates the degree distribution of the `z_network`.
+
+A flexible, general function for evaluating network connectivity across
+global networks, local neighborhoods, attribute-defined subgroups, and
+cross-group spillover pathways.
+
+\subsection{Topological Scope (\code{mode})}{
+\itemize{
+  \item \code{"global"} (default): Evaluates degree distributions across all dyads in the network.
+  \item \code{"local"}: Evaluates local degree distributions restricted strictly to unit pairs
+    that share an overlapping neighborhood (\code{overlap}).
+}
+}
+
+\subsection{Directionality and Bipartite Subgroups}{
+\itemize{
+  \item \strong{Directed networks}: Always returns both \code{out_degree} (ties sent) and
+    \code{in_degree} (ties received).
+  \item \strong{Undirected networks}: Returns a single overall \code{degree} distribution when
+    unconstrained or single-side constrained. When bilateral constraints are supplied
+    (e.g., sender \eqn{i} and receiver \eqn{j}), ties are evaluated directionally
+    (\eqn{i \to j}), returning both \code{out_degree} and \code{in_degree}.
+}
+}
+
+\subsection{Spillover and Subgroup Conditioning}{
+Any combination of sender attributes (\code{x_i}, \code{y_i}) and receiver attributes
+(\code{x_j}, \code{y_j}) can be specified to measure spillover dynamics:
+\itemize{
+  \item \code{out_degree}: Distribution of ties sent from matching senders \eqn{i} to matching receivers \eqn{j} (spillover sending capacity).
+  \item \code{in_degree}: Distribution of ties received by matching receivers \eqn{j} from matching senders \eqn{i} (spillover exposure).
+}
+}
+
+\subsection{Supported Constraint Formats & Internal Handling}{
+Attribute constraints (\code{x_i}, \code{x_j}, \code{y_i}, \code{y_j}) accept:
+\itemize{
+  \item \strong{Exact scalar values}: For binary attributes, matches units with that exact value (e.g., \code{x_i = 1}).
+  \item \strong{Continuous / Count shortcuts}: When an attribute is continuous (\code{"normal"}) or count (\code{"poisson"}),
+    setting \code{1} internally selects above-mean units (\eqn{x_i > \bar{x}}), and \code{0} selects
+    below-or-equal-to-mean units (\eqn{x_i \le \bar{x}}). Any other numeric value \eqn{v} matches units with exact value \eqn{v}.
+  \item \strong{Discrete value sets}: Vectors such as \code{x_i = c(1, 2)} match units with any value in that set.
+  \item \strong{Filtering functions}: Custom functions (vectorized or scalar), e.g., \code{x_i = function(x) x > 0.5}
+    or \code{y_j = \(y) if (y > 2) TRUE else FALSE}.
+}
+}
+
+\subsection{Plotting and Axis Labels}{
+When \code{plot = TRUE}, mathematical expressions are formatted automatically for the x-axis:
+\itemize{
+  \item Exact values and sets display as \eqn{x_i == 1} or \eqn{x_i == \text{c(1, 2)}}.
+  \item Continuous shortcuts display with sample mean bars as \eqn{x_i > \bar{x}} or \eqn{x_i \le \bar{x}}.
+  \item Filtering functions display as \eqn{x_i == \text{"fn"}}.
+}
+}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$degree_distribution(value_range = NULL, prob = TRUE, plot = TRUE)}
+    \preformatted{iglm.data$degree_distribution(
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{value_range}}{(numeric vector) A vector `c(min, max)` specifying
-the range of degrees to tabulate. If `NULL` (default), the range
-is inferred from the data.}
-      \item{\code{prob}}{(logical) If `TRUE` (default), returns a probability
-distribution (proportions). If `FALSE`, returns raw counts.}
-      \item{\code{plot}}{(logical) If `TRUE`, plots the degree distribution.}
+      \item{\code{value_range}}{(numeric vector or list) A vector \code{c(min, max)} specifying
+the range of degrees to tabulate, or a list with \code{in_degree} and \code{out_degree}.
+If \code{NULL} (default), ranges are inferred from the data.}
+      \item{\code{prob}}{(logical) If \code{TRUE} (default), returns a probability
+distribution (proportions). If \code{FALSE}, returns raw counts.}
+      \item{\code{plot}}{(logical) If \code{TRUE}, plots the degree distribution barplot(s).}
+      \item{\code{x_i}}{(optional) Exact value, vector, or filtering function for attribute \code{x} of sender unit \eqn{i}.}
+      \item{\code{x_j}}{(optional) Exact value, vector, or filtering function for attribute \code{x} of receiver unit \eqn{j}.}
+      \item{\code{y_i}}{(optional) Exact value, vector, or filtering function for attribute \code{y} of sender unit \eqn{i}.}
+      \item{\code{y_j}}{(optional) Exact value, vector, or filtering function for attribute \code{y} of receiver unit \eqn{j}.}
+      \item{\code{mode}}{(character) Either \code{"global"} (default) to evaluate across all dyads,
+or \code{"local"} to evaluate only ties within overlapping neighborhoods (\code{overlap}).}
     }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    If the network is directed, a list containing two `table`
-  objects: `in_degree` and `out_degree`. If undirected, a single
-  `table` object with the degree distribution.
+    If the network is directed or if bilateral constraints are provided,
+  a list containing two \code{table} objects: \code{out_degree} and \code{in_degree}.
+  If undirected without bilateral constraints, a single \code{table} object with
+  the \code{degree} distribution.
+  }
+  \subsection{Examples}{
+    \if{html}{\out{<div class="r example copy">}}
+    \preformatted{data(copenhagen)
+
+# Overall degree distribution
+copenhagen$degree_distribution(prob = FALSE, plot = FALSE)
+
+# Spillover degree distribution (female to male call connections)
+copenhagen$deg_dist(
+  x_i = 1, # Sender: female
+  x_j = 0, # Receiver: male
+  mode = "local",
+  plot = FALSE
+)
+}
+    \if{html}{\out{</div>}}
   }
 }
 
@@ -758,49 +1345,156 @@ distribution (proportions). If `FALSE`, returns raw counts.}
 \if{latex}{\out{\hypertarget{method-iglm.data-degree}{}}}
 \subsection{\code{iglm.data$degree()}}{
   Calculates the degree sequence(s) of the `z_network`.
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$degree()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    If the network is directed, a list containing two vectors:
-  `in_degree_seq` and `out_degree_seq`. If undirected, a single
-  list containing the vector `degree_seq`.
-  }
-}
 
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-iglm.data-spillover_degree_distribution"></a>}}
-\if{latex}{\out{\hypertarget{method-iglm.data-spillover_degree_distribution}{}}}
-\subsection{\code{iglm.data$spillover_degree_distribution()}}{
-  Calculates the spillover degree distribution between actors with
-`x_attribute == 1` and actors with `y_attribute == 1`.
+General function for calculating unit-level degree sequences across global
+topologies, local neighborhoods, attribute-defined subsets, or directional
+spillover pathways.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.data$spillover_degree_distribution(
-  prob = TRUE,
-  value_range = NULL,
-  plot = TRUE
+    \preformatted{iglm.data$degree(
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
 )}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{prob}}{(logical) If `TRUE` (default), returns a probability
-distribution (proportions). If `FALSE`, returns raw counts.}
-      \item{\code{value_range}}{(numeric vector) A vector `c(min, max)` specifying
-the range of degrees to tabulate. If `NULL` (default), the range
-is inferred from the data.}
-      \item{\code{plot}}{(logical) If `TRUE`, plots the distributions.}
+      \item{\code{x_i}}{(optional) Exact value, vector, or filtering function for attribute \code{x} of sender unit \eqn{i}.}
+      \item{\code{x_j}}{(optional) Exact value, vector, or filtering function for attribute \code{x} of receiver unit \eqn{j}.}
+      \item{\code{y_i}}{(optional) Exact value, vector, or filtering function for attribute \code{y} of sender unit \eqn{i}.}
+      \item{\code{y_j}}{(optional) Exact value, vector, or filtering function for attribute \code{y} of receiver unit \eqn{j}.}
+      \item{\code{mode}}{(character) \code{"global"} (default) or \code{"local"}.}
     }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    A list containing two `table` objects:
-  `out_spillover_degree` (from x_i=1 to y_j=1) and
-  `in_spillover_degree` (from y_i=1 to x_j=1).
+    If the network is directed or if asymmetric/bipartite bilateral constraints are given,
+  a list containing two numeric vectors: \code{out_degree_seq} and \code{in_degree_seq}.
+  If undirected without constraints or with identical bilateral constraints,
+  a list containing the vector \code{degree_seq}.
+  }
+  \subsection{Examples}{
+    \if{html}{\out{<div class="r example copy">}}
+    \preformatted{data(copenhagen)
+
+# Global degree sequence
+copenhagen$degree()
+
+# Local spillover degree sequence with filtering functions
+copenhagen$deg(
+  x_i = function(x) x > 2,
+  y_j = function(y) y > 2,
+  mode = "local"
+)
+}
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-deg"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-deg}{}}}
+\subsection{\code{iglm.data$deg()}}{
+  Short alias for `degree`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$deg(x_i = NULL, x_j = NULL, y_i = NULL, y_j = NULL, mode = "global")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{x_i}}{Optional sender attribute constraint.}
+      \item{\code{x_j}}{Optional receiver attribute constraint.}
+      \item{\code{y_i}}{Optional sender attribute constraint.}
+      \item{\code{y_j}}{Optional receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Degree sequence(s).
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-deg_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-deg_dist}{}}}
+\subsection{\code{iglm.data$deg_dist()}}{
+  Short alias for `degree_distribution`.
+Supports standard, local, and attribute-constrained (spillover) degree distributions.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$deg_dist(
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{value_range}}{Optional range of degrees to tabulate.}
+      \item{\code{prob}}{(logical) If `TRUE`, returns proportions.}
+      \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{Optional sender attribute constraint.}
+      \item{\code{x_j}}{Optional receiver attribute constraint.}
+      \item{\code{y_i}}{Optional sender attribute constraint.}
+      \item{\code{y_j}}{Optional receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Degree distribution table(s).
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-iglm.data-degree_dist"></a>}}
+\if{latex}{\out{\hypertarget{method-iglm.data-degree_dist}{}}}
+\subsection{\code{iglm.data$degree_dist()}}{
+  Alias for `deg_dist` / `degree_distribution`.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{iglm.data$degree_dist(
+  value_range = NULL,
+  prob = TRUE,
+  plot = TRUE,
+  x_i = NULL,
+  x_j = NULL,
+  y_i = NULL,
+  y_j = NULL,
+  mode = "global"
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{value_range}}{Optional range of degrees to tabulate.}
+      \item{\code{prob}}{(logical) If `TRUE`, returns proportions.}
+      \item{\code{plot}}{(logical) If `TRUE`, plots the distribution.}
+      \item{\code{x_i}}{Optional sender attribute constraint.}
+      \item{\code{x_j}}{Optional receiver attribute constraint.}
+      \item{\code{y_i}}{Optional sender attribute constraint.}
+      \item{\code{y_j}}{Optional receiver attribute constraint.}
+      \item{\code{mode}}{(character) `"global"` (default) or `"local"`.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Degree distribution table(s).
   }
 }
 
