@@ -14,7 +14,7 @@
 #ifdef IGLM_COMPILING_IGLM
 #define IGLM_API __declspec(dllexport)
 #else
-#define IGLM_API __declspec(dllimport)
+#define IGLM_API
 #endif
 #else
 #define IGLM_API __attribute__ ((visibility ("default")))

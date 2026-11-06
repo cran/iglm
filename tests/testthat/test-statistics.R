@@ -844,11 +844,228 @@ test_that("statistics() supports canonical_names and switches between labeled an
   expect_equal(unname(stats_labeled), unname(stats_canonical))
 
   # Validation of canonical_names parameter
-  expect_error(statistics(formula.norm, canonical_names = NA), "`canonical_names` must be a single non-missing logical value")
-  expect_error(statistics(formula.norm, canonical_names = c(TRUE, FALSE)), "`canonical_names` must be a single non-missing logical value")
-  expect_error(statistics(formula.norm, canonical_names = "TRUE"), "`canonical_names` must be a single non-missing logical value")
+  expect_error(statistics(formula.norm, canonical_names = NA), "'canonical_names' must be a single non-missing logical value")
+  expect_error(statistics(formula.norm, canonical_names = c(TRUE, FALSE)), "'canonical_names' must be a single non-missing logical value")
+  expect_error(statistics(formula.norm, canonical_names = "TRUE"), "'canonical_names' must be a single non-missing logical value")
 })
 
+test_that("attribute_xy with local mode correctly attributes x to neighbors and y to target", {
+  B <- matrix(0, 3, 3)
+  B[1, 2] <- B[2, 1] <- 1
+  B[2, 3] <- B[3, 2] <- 1
+  diag(B) <- 1
+  x <- c(10, 20, 30)
+  y <- c(1, 2, 3)
 
+  obj <- iglm.data(x_attribute = x, y_attribute = y, neighborhood = B, directed = FALSE,
+                   family_x = "normal", family_y = "normal")
+  # In B (path 1-2-3 with closed neighborhoods N_i = {i} U N(i)):
+  # N_1 = {1, 2}, N_2 = {1, 2, 3}, N_3 = {2, 3}
+  # All pairs of distinct nodes share common neighbors (1-2 via 1,2; 2-3 via 2,3; 1-3 via 2).
+  # mode = "local" sums over distinct overlap partners:
+  # node 1: overlap {2, 3}, sum_x = 20 + 30 = 50, term = 50 * y[1] = 50
+  # node 2: overlap {1, 3}, sum_x = 10 + 30 = 40, term = 40 * y[2] = 80
+  # node 3: overlap {1, 2}, sum_x = 10 + 20 = 30, term = 30 * y[3] = 90
+  # total = 50 + 80 + 90 = 220
+  stat_val <- statistics(obj ~ attribute_xy(mode = "local"))
+  expect_equal(unname(stat_val), 220)
 
+  # mode = "alocal" sums over units not in distinct overlap (only unit itself):
+  # node 1: {1}, sum_x = 10, term = 10 * 1 = 10
+  # node 2: {2}, sum_x = 20, term = 20 * 2 = 40
+  # node 3: {3}, sum_x = 30, term = 30 * 3 = 90
+  # total = 10 + 40 + 90 = 140
+  stat_alocal <- statistics(obj ~ attribute_xy(mode = "alocal"))
+  expect_equal(unname(stat_alocal), 140)
+})
 
+test_that("gwdsp ISP throws error for undirected network", {
+  B <- matrix(1, 4, 4)
+  diag(B) <- 0
+  obj <- iglm.data(x_attribute = rep(0, 4), y_attribute = rep(0, 4), neighborhood = B, directed = FALSE)
+  expect_error(statistics(obj ~ gwdsp(variant = "ISP", decay = 0.5)), "ISP")
+})
+
+test_that("attribute_xz, attribute_yz, and spillover_yc change stats match finite differences on directed networks", {
+  n <- 5
+  nb <- matrix(0, n, n)
+  nb[1:3, 1:3] <- 1
+  nb[3:5, 3:5] <- 1
+  diag(nb) <- 1
+
+  z_dir <- matrix(0, n, n)
+  z_dir[1, 2] <- 1; z_dir[2, 1] <- 1
+  z_dir[2, 3] <- 1; z_dir[3, 1] <- 1
+  z_dir[3, 4] <- 1; z_dir[4, 5] <- 1
+  diag(z_dir) <- 0
+
+  x_bin <- c(1, 0, 1, 1, 0)
+  y_bin <- c(0, 1, 1, 0, 1)
+  v_cov <- c(0.5, -0.2, 1.0, -1.5, 0.8)
+
+  d0 <- iglm.data(z_network = z_dir, x_attribute = x_bin, y_attribute = y_bin,
+                  neighborhood = nb, directed = TRUE, family_x = "binomial", family_y = "binomial")
+
+  # Test attribute_xz(mode = 'local') for x updates
+  form_xz <- d0 ~ attribute_xz(mode = "local")
+  prep_xz <- iglm:::formula_preprocess(form_xz)
+  pseudo_xz <- iglm:::xyz_prepare_pseudo_estimation(
+    z_network = z_dir, x_attribute = x_bin, y_attribute = y_bin,
+    neighborhood = d0$neighborhood, overlap = d0$overlap,
+    directed = TRUE, terms = prep_xz$term_names,
+    data_list = prep_xz$data_list, type_list = prep_xz$type_list,
+    display_progress = FALSE, family_x = "binomial", family_y = "binomial",
+    attr_x_scale = 1.0, attr_y_scale = 1.0,
+    return_x = TRUE, return_y = FALSE, return_z = FALSE
+  )
+  for (i in 1:n) {
+    x_new <- x_bin; x_new[i] <- 1 - x_new[i]
+    d_tog <- iglm.data(z_network = z_dir, x_attribute = x_new, y_attribute = y_bin,
+                       neighborhood = nb, directed = TRUE, family_x = "binomial", family_y = "binomial")
+    s0 <- statistics(form_xz)
+    s1 <- statistics(d_tog ~ attribute_xz(mode = "local"))
+    true_delta <- if (x_bin[i] == 0) (s1 - s0) else (s0 - s1)
+    expect_equal(unname(pseudo_xz$res_x$data[i, 3]), unname(true_delta))
+  }
+
+  # Test attribute_yz(mode = 'local') for y updates
+  form_yz <- d0 ~ attribute_yz(mode = "local")
+  prep_yz <- iglm:::formula_preprocess(form_yz)
+  pseudo_yz <- iglm:::xyz_prepare_pseudo_estimation(
+    z_network = z_dir, x_attribute = x_bin, y_attribute = y_bin,
+    neighborhood = d0$neighborhood, overlap = d0$overlap,
+    directed = TRUE, terms = prep_yz$term_names,
+    data_list = prep_yz$data_list, type_list = prep_yz$type_list,
+    display_progress = FALSE, family_x = "binomial", family_y = "binomial",
+    attr_x_scale = 1.0, attr_y_scale = 1.0,
+    return_x = FALSE, return_y = TRUE, return_z = FALSE
+  )
+  for (i in 1:n) {
+    y_new <- y_bin; y_new[i] <- 1 - y_new[i]
+    d_tog <- iglm.data(z_network = z_dir, x_attribute = x_bin, y_attribute = y_new,
+                       neighborhood = nb, directed = TRUE, family_x = "binomial", family_y = "binomial")
+    s0 <- statistics(form_yz)
+    s1 <- statistics(d_tog ~ attribute_yz(mode = "local"))
+    true_delta <- if (y_bin[i] == 0) (s1 - s0) else (s0 - s1)
+    expect_equal(unname(pseudo_yz$res_y$data[i, 3]), unname(true_delta))
+  }
+
+  # Test spillover_yc(mode = 'local') for y updates
+  form_yc <- d0 ~ spillover_yc(mode = "local", data = v_cov)
+  prep_yc <- iglm:::formula_preprocess(form_yc)
+  pseudo_yc <- iglm:::xyz_prepare_pseudo_estimation(
+    z_network = z_dir, x_attribute = x_bin, y_attribute = y_bin,
+    neighborhood = d0$neighborhood, overlap = d0$overlap,
+    directed = TRUE, terms = prep_yc$term_names,
+    data_list = prep_yc$data_list, type_list = prep_yc$type_list,
+    display_progress = FALSE, family_x = "binomial", family_y = "binomial",
+    attr_x_scale = 1.0, attr_y_scale = 1.0,
+    return_x = FALSE, return_y = TRUE, return_z = FALSE
+  )
+  for (i in 1:n) {
+    y_new <- y_bin; y_new[i] <- 1 - y_new[i]
+    d_tog <- iglm.data(z_network = z_dir, x_attribute = x_bin, y_attribute = y_new,
+                       neighborhood = nb, directed = TRUE, family_x = "binomial", family_y = "binomial")
+    s0 <- statistics(form_yc)
+    s1 <- statistics(d_tog ~ spillover_yc(mode = "local", data = v_cov))
+    true_delta <- if (y_bin[i] == 0) (s1 - s0) else (s0 - s1)
+    expect_equal(unname(pseudo_yc$res_y$data[i, 3]), unname(true_delta))
+  }
+})
+
+test_that("Directed-only terms throw informative errors when used on undirected networks", {
+  n <- 4
+  nb <- matrix(1, n, n)
+  d_und <- iglm.data(z_network = matrix(0, n, n), x_attribute = rep(0, n), y_attribute = rep(0, n),
+                     neighborhood = nb, directed = FALSE)
+  expect_error(statistics(d_und ~ outedges_x), "only for directed")
+  expect_error(statistics(d_und ~ outedges_y), "only for directed")
+  expect_error(statistics(d_und ~ gwodegree), "only for directed")
+  expect_error(statistics(d_und ~ spillover_yx), "only for directed")
+})
+
+test_that("Covariate terms enforce mandatory data argument and bounds", {
+  n <- 4
+  adj <- matrix(0, n, n)
+  adj[1, 2] <- adj[2, 3] <- adj[3, 4] <- 1
+  dat_dir <- iglm.data(z_network = adj, n_units = n, directed = TRUE)
+  dat_undir <- iglm.data(z_network = adj + t(adj), n_units = n, directed = FALSE)
+
+  # Missing data argument
+  expect_error(statistics(dat_dir ~ cov_x()), "Argument 'data' is mandatory for term 'cov_x'")
+  expect_error(statistics(dat_dir ~ cov_y()), "Argument 'data' is mandatory for term 'cov_y'")
+  expect_error(statistics(dat_dir ~ cov_z()), "Argument 'data' is mandatory for term 'cov_z'")
+  expect_error(statistics(dat_dir ~ cov_z_in()), "Argument 'data' is mandatory for term 'cov_z_in'")
+  expect_error(statistics(dat_dir ~ cov_z_out()), "Argument 'data' is mandatory for term 'cov_z_out'")
+  expect_error(statistics(dat_dir ~ spillover_yc()), "Argument 'data' is mandatory for term 'spillover_yc'")
+  expect_error(statistics(dat_undir ~ spillover_yc_symm()), "Argument 'data' is mandatory for term 'spillover_yc_symm'")
+
+  # Length mismatch for monadic covariates
+  short_v <- c(1, 2)
+  expect_error(statistics(dat_dir ~ cov_x(short_v)), "must have length 4")
+  expect_error(statistics(dat_dir ~ cov_y(short_v)), "must have length 4")
+  expect_error(statistics(dat_dir ~ cov_z_in(short_v)), "must have length 4")
+  expect_error(statistics(dat_dir ~ cov_z_out(short_v)), "must have length 4")
+  expect_error(statistics(dat_dir ~ spillover_yc(short_v)), "must have length 4")
+  expect_error(statistics(dat_undir ~ spillover_yc_symm(short_v)), "must have length 4")
+
+  # 2D matrix passed to monadic covariate
+  mat_2d <- matrix(1, 2, 2)
+  expect_error(statistics(dat_dir ~ cov_x(mat_2d)), "must be a vector or 1-row matrix")
+
+  # Dyadic covariate dimension mismatch for cov_z
+  expect_error(statistics(dat_dir ~ cov_z(matrix(1, 3, 3))), "must be a 4 x 4 square matrix")
+  expect_error(statistics(dat_dir ~ cov_z(matrix(1, 4, 3))), "must be a 4 x 4 square matrix")
+  expect_error(statistics(dat_dir ~ cov_z(1:4)), "must be a matrix")
+
+  # Valid statistics evaluation
+  v <- c(1, 2, 3, 4)
+  mat4 <- matrix(1:16, 4, 4)
+  s_x <- statistics(dat_dir ~ cov_x(v))
+  expect_equal(length(s_x), 1L)
+  expect_false(is.na(s_x))
+
+  s_y <- statistics(dat_dir ~ cov_y(v))
+  expect_equal(length(s_y), 1L)
+  expect_false(is.na(s_y))
+
+  s_z <- statistics(dat_dir ~ cov_z(mat4))
+  expect_equal(length(s_z), 1L)
+  expect_false(is.na(s_z))
+
+  s_zin <- statistics(dat_dir ~ cov_z_in(v))
+  expect_equal(length(s_zin), 1L)
+  expect_false(is.na(s_zin))
+
+  s_zout <- statistics(dat_dir ~ cov_z_out(v))
+  expect_equal(length(s_zout), 1L)
+  expect_false(is.na(s_zout))
+
+  s_spill <- statistics(dat_dir ~ spillover_yc(v))
+  expect_equal(length(s_spill), 1L)
+  expect_false(is.na(s_spill))
+
+  s_spill_symm <- statistics(dat_undir ~ spillover_yc_symm(v))
+  expect_equal(length(s_spill_symm), 1L)
+  expect_false(is.na(s_spill_symm))
+})
+
+test_that("gwesp_symm and gwdsp_symm terms work for undirected networks", {
+  n <- 5
+  adj <- matrix(0, n, n)
+  adj[1, 2] <- adj[2, 3] <- adj[3, 1] <- 1
+  adj <- adj + t(adj)
+  dat_undir <- iglm.data(z_network = adj, n_units = n, directed = FALSE)
+  dat_dir <- iglm.data(z_network = adj, n_units = n, directed = TRUE)
+
+  s_gwesp <- statistics(dat_undir ~ gwesp_symm(decay = 0.5))
+  expect_equal(length(s_gwesp), 1L)
+  expect_false(is.na(s_gwesp))
+
+  s_gwdsp <- statistics(dat_undir ~ gwdsp_symm(decay = 0.5))
+  expect_equal(length(s_gwdsp), 1L)
+  expect_false(is.na(s_gwdsp))
+
+  expect_error(statistics(dat_dir ~ gwesp_symm(decay = 0.5)))
+  expect_error(statistics(dat_dir ~ gwdsp_symm(decay = 0.5)))
+})

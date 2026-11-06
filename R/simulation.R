@@ -5,7 +5,7 @@
 #'
 #' @param formula A model `formula` object. The left-hand side should be the
 #'   name of a `iglm.data` object available in the calling environment.
-#'   See \code{\link{iglm-terms}} for details on specifying the right-hand side terms.
+#'   See \code{\link{iglm.terms}} for details on specifying the right-hand side terms.
 #' @param coef Numeric vector containing the coefficient values for the structural
 #'   (non-degrees) terms defined in the `formula`.
 #' @param coef_degrees Numeric vector specifying the degrees coefficient
@@ -91,6 +91,7 @@
 #' }
 #'
 #' @seealso \code{\link{iglm}} for creating the model object,
+#'   \code{\link{iglm.terms}} for available model terms,
 #'   \code{\link{sampler.iglm}} for creating the sampler object,
 #'   \code{\link{iglm.data}} for the data object structure.
 #'
@@ -108,12 +109,8 @@ simulate_iglm <- function(formula,
                           fix_z = NULL) {
   if (is.null(sampler)) {
     sampler <- sampler.iglm()
-    # if no specifications of the sampler are provided use the default one
-  }
-
-
-  if (!inherits(sampler, "sampler.iglm")) {
-    sampler <- sampler.iglm()
+  } else if (!inherits(sampler, "sampler.iglm")) {
+    stop("'sampler' must be a 'sampler.iglm' object created with 'sampler.iglm()'.", call. = FALSE)
   }
   # Search for all things in the environment of the formula
   # attr(formula, ".Environment")
@@ -169,8 +166,22 @@ simulate_iglm <- function(formula,
     stop("Wrong number of coefficients for the wanted terms.", call. = FALSE)
   }
 
-  if (is.null(coef_degrees)) {
-    coef_degrees <- numeric(0)
+  if (degrees) {
+    if (is.null(coef_degrees) || length(coef_degrees) == 0) {
+      stop("The formula includes 'degrees' terms, but 'coef_degrees' was not provided.", call. = FALSE)
+    }
+    if (!is.numeric(coef_degrees)) {
+      stop("'coef_degrees' must be a numeric vector.", call. = FALSE)
+    }
+    expected_len <- if (data_obj$directed) 2 * n_units else n_units
+    if (length(coef_degrees) != expected_len) {
+      stop(sprintf("'coef_degrees' must have length %d (got %d).", expected_len, length(coef_degrees)), call. = FALSE)
+    }
+    coef_degrees[is.na(coef_degrees)] <- -Inf
+  } else {
+    if (is.null(coef_degrees)) {
+      coef_degrees <- numeric(0)
+    }
   }
 
   if (!is_cluster_active(cluster)) {
@@ -209,6 +220,9 @@ simulate_iglm <- function(formula,
       fix_z = sim_fix_z,
       tnt = sampler$sampler_z$tnt
     )
+    if (!is.null(res$simulation_networks_z)) {
+      res$simulation_networks <- res$simulation_networks_z
+    }
   } else {
     if (display_progress) {
       cat("Starting with burn-in\n")
@@ -253,8 +267,9 @@ simulate_iglm <- function(formula,
       z_network = res_burn_in$simulation_networks_z[[1]],
       n_units = n_units, return_adj_mat = FALSE
     )
-    # tmp_split = split(1:(round(sampler$n_simulation/length(cluster))*length(cluster)), 1:length(cluster))
-    tmp_split <- suppressWarnings(split(1:sampler$n_simulation, seq_along(cluster)))
+    n_workers <- min(sampler$n_simulation, length(cluster))
+    grouping <- rep(seq_len(n_workers), length.out = sampler$n_simulation)
+    tmp_split <- split(seq_len(sampler$n_simulation), grouping)
 
     if (display_progress) {
       cat("Starting with parallel simulations")
@@ -306,13 +321,13 @@ simulate_iglm <- function(formula,
     res <- list()
     res$simulation_attributes_x <- unlist(lapply(res_parallel, function(x) {
       x$simulation_attributes_x
-    }), recursive = F)
+    }), recursive = FALSE)
     res$simulation_attributes_y <- unlist(lapply(res_parallel, function(x) {
       x$simulation_attributes_y
-    }), recursive = F)
+    }), recursive = FALSE)
     res$simulation_networks <- unlist(lapply(res_parallel, function(x) {
       x$simulation_networks_z
-    }), recursive = F)
+    }), recursive = FALSE)
     res$stats <- do.call(rbind, lapply(res_parallel, function(x) {
       x$stats
     }))
@@ -343,13 +358,13 @@ simulate_iglm <- function(formula,
         y_attribute = tmp[[x]]$y_attribute,
         z_network = tmp[[x]]$z_network,
         directed = data_obj$directed,
-        n_units = length(tmp[[x]]$x_attribute),
+        n_units = data_obj$n_units,
         family_x = data_obj$family_x,
         family_y = data_obj$family_y,
         scale_x = data_obj$scale_x,
         scale_y = data_obj$scale_y,
-        fix_x = data_obj$fix_x,
-        fix_z = data_obj$fix_z,
+        fix_x = sim_fix_x,
+        fix_z = sim_fix_z,
         fix_z_alocal = data_obj$fix_z_alocal,
         label_x = data_obj$label_x,
         label_y = data_obj$label_y,
@@ -360,7 +375,12 @@ simulate_iglm <- function(formula,
   )
   # browser()
   class(tmp) <- "iglm.data.list"
-  attr(tmp, "neighborhood") <- iglm.data.neighborhood(data_obj$neighborhood)
+  res_nb <- list(
+    neighborhood = data_obj$neighborhood,
+    overlap = data_obj$overlap
+  )
+  class(res_nb) <- "iglm.data.neighborhood"
+  attr(tmp, "neighborhood") <- res_nb
   colnames(res$stats) <- preprocessed$coef_names
   return(list(samples = tmp, stats = res$stats))
 }

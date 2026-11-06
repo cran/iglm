@@ -13,5 +13,9 @@ test_that("iglm.data.neighborhood validation works", {
   
   # Invalid type
   expect_error(iglm.data.neighborhood("not a matrix"), 
-               "`neighborhood` must be a matrix or data frame")
+               "'neighborhood' must be a matrix or data frame")
+
+  # 2x2 neighborhood matrix correctly infers n_units = 2
+  res2 <- iglm.data.neighborhood(matrix(1, 2, 2), directed = FALSE)
+  expect_equal(nrow(res2$overlap), 2)
 })

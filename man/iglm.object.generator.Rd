@@ -100,7 +100,7 @@ and control objects, calculating initial statistics, and validating.
     \describe{
       \item{\code{formula}}{A model `formula` object. The left-hand side should be the
 name of a \code{\link{iglm.data}} object available in the calling environment.
-See \code{\link{iglm-terms}} for details on specifying the right-hand side terms.}
+See \code{\link{iglm.terms}} for details on specifying the right-hand side terms.}
       \item{\code{coef}}{A numeric vector of initial coefficients for the terms in
 the formula (excluding degree coefficeints). If `NULL`, coefficients are
 initialized to zero.}
@@ -162,7 +162,7 @@ model parameters. Requires simulations to have been run first (via
  \code{iglm.object$simulate} or \code{iglm.object_generator$estimate}).
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{iglm.object$assess(formula, plot = TRUE)}
+    \preformatted{iglm.object$assess(formula, plot = TRUE, ...)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -174,6 +174,7 @@ The terms should correspond to methods available in the \code{\link{iglm.data}}
 object that end with `distributions`.
 If the term mcmc_diagnostics is included, MCMC diagnostics will also be computed.}
       \item{\code{plot}}{(logical) If `TRUE`, generates plots comparing observed and simulated statistics. Default is `TRUE`.}
+      \item{\code{...}}{Additional arguments passed to \code{plot}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -239,8 +240,8 @@ paths and model assessment diagnostics if available.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{stats}}{(logical) If `TRUE`, plot the observed vs. simulated
-statistics from model assessment. Default is `FALSE`.}
+      \item{\code{stats}}{(logical) If `TRUE`, plot the trace of simulated
+statistics. Default is `FALSE`.}
       \item{\code{trace}}{(logical) If `TRUE`, plot the coefficient convergence
 paths. Default is `FALSE`.}
       \item{\code{model_assessment}}{(logical) If `TRUE`, plot diagnostics from the

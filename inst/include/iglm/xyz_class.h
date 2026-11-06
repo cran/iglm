@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>
 #include "xz_class.h"
-#define DARMA_USE_CURRENT
 
 class IGLM_API XYZ_class: public XZ_class {
 public:

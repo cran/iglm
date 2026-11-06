@@ -46,9 +46,8 @@ test_that("Define a iglm.data object and check all functions", {
   expect_equal(tmp$mean_z(), expected = 4 / 6)
   expect_equal(tmp$mean_x(), expected = 1 / 4)
   expect_equal(tmp$mean_y(), expected = 2 / 4)
-  expect_equal(nrow(tmp$overlap) == 12,
-    expected = nrow(tmp$neighborhood) == 12
-  )
+  expect_equal(nrow(tmp$overlap), expected = 12)
+  expect_equal(nrow(tmp$neighborhood), expected = 16)
   tmp$save(file = tmp_name)
   rm(tmp)
   loaded_tmp <- iglm.data(file = tmp_name)
@@ -57,9 +56,8 @@ test_that("Define a iglm.data object and check all functions", {
   expect_equal(loaded_tmp$mean_z(), expected = 4 / 6)
   expect_equal(loaded_tmp$mean_x(), expected = 1 / 4)
   expect_equal(loaded_tmp$mean_y(), expected = 2 / 4)
-  expect_equal(nrow(loaded_tmp$overlap) == 12,
-    expected = nrow(loaded_tmp$neighborhood) == 12
-  )
+  expect_equal(nrow(loaded_tmp$overlap), expected = 12)
+  expect_equal(nrow(loaded_tmp$neighborhood), expected = 16)
 
   file.remove(tmp_name)
 })
@@ -122,9 +120,8 @@ test_that("Define a directed iglm.data object and check all functions", {
   ), nrow = 4, byrow = TRUE)
   expect_equal(tmp$degree()$in_degree_seq, expected = colSums(network_tmp))
   expect_equal(tmp$degree()$out_degree_seq, expected = rowSums(network_tmp))
-  expect_equal(nrow(tmp$overlap) == 12,
-    expected = nrow(tmp$neighborhood) == 12
-  )
+  expect_equal(nrow(tmp$overlap), expected = 12)
+  expect_equal(nrow(tmp$neighborhood), expected = 16)
   tmp$save(file = tmp_name)
   rm(tmp)
   loaded_tmp <- iglm.data(file = tmp_name)
@@ -133,9 +130,8 @@ test_that("Define a directed iglm.data object and check all functions", {
   expect_equal(loaded_tmp$mean_y(), expected = 2 / 4)
   expect_equal(loaded_tmp$degree()$in_degree_seq, expected = colSums(network_tmp))
   expect_equal(loaded_tmp$degree()$out_degree_seq, expected = rowSums(network_tmp))
-  expect_equal(nrow(loaded_tmp$overlap) == 12,
-    expected = nrow(loaded_tmp$neighborhood) == 12
-  )
+  expect_equal(nrow(loaded_tmp$overlap), expected = 12)
+  expect_equal(nrow(loaded_tmp$neighborhood), expected = 16)
   file.remove(tmp_name)
 })
 
@@ -150,25 +146,25 @@ test_that("iglm.data validation throws error when attributes or networks contain
   # Check x_attribute NA
   expect_error(
     iglm.data(x_attribute = x_na, y_attribute = y_clean, z_network = z_clean, n_units = 4, family_x = "normal", family_y = "binomial"),
-    pattern = "'x_attribute' contains missing \\(NA/NaN\\) values."
+    regexp = "'x_attribute' contains missing \\(NA/NaN\\) values."
   )
 
   # Check y_attribute NA
   expect_error(
     iglm.data(x_attribute = x_clean, y_attribute = y_na, z_network = z_clean, n_units = 4, family_x = "normal", family_y = "binomial"),
-    pattern = "'y_attribute' contains missing \\(NA/NaN\\) values."
+    regexp = "'y_attribute' contains missing \\(NA/NaN\\) values."
   )
 
   # Check z_network matrix NA
   expect_error(
     iglm.data(x_attribute = x_clean, y_attribute = y_clean, z_network = z_na, n_units = 4, family_x = "normal", family_y = "binomial"),
-    pattern = "'z_network' contains missing \\(NA/NaN\\) values."
+    regexp = "'z_network' contains missing \\(NA/NaN\\) values."
   )
 
   # Check neighborhood matrix NA
   expect_error(
     iglm.data(x_attribute = x_clean, y_attribute = y_clean, z_network = z_clean, neighborhood = z_na, n_units = 4, family_x = "normal", family_y = "binomial"),
-    pattern = "'neighborhood' contains missing \\(NA/NaN\\) values."
+    regexp = "'neighborhood' contains missing \\(NA/NaN\\) values."
   )
 })
 
@@ -521,6 +517,7 @@ test_that("iglm.data supports custom label_x, label_y, and label_z", {
   expect_true(any(grepl("x_attribute \\[party\\]", out_print)))
   expect_true(any(grepl("y_attribute \\[vote\\]", out_print)))
   expect_true(any(grepl("connections \\[advice\\]", out_print)))
+  expect_true(any(grepl("local dyads.*20 / 20 \\(100.0%\\)", out_print)))
 
   # Normal attribute print output shows mean and sd only (no redundant scale)
   x_norm <- rnorm(n_units)
@@ -550,7 +547,7 @@ test_that("iglm.data supports backward compatibility with n_actor argument and f
   # Reading d$n_actor emits warning and returns n_units
   expect_warning(
     actor_count <- d_old$n_actor,
-    regexp = "`n_actor` is deprecated, please use `n_units`."
+    regexp = "'n_actor' is deprecated, please use 'n_units'."
   )
   expect_equal(actor_count, n_nodes)
 
@@ -616,4 +613,188 @@ test_that("iglm.data supports family_x and family_y with strict validation", {
   expect_null(d_str$type_x)
   expect_null(d_str$type_y)
 })
+
+test_that("asymmetric neighborhood matrix is symmetrized when directed = FALSE", {
+  B <- diag(4)
+  B[1, 2] <- B[1, 3] <- 1
+  Z <- matrix(0, 4, 4)
+  Z[1, 2] <- Z[1, 3] <- Z[2, 3] <- 1
+  Z <- Z + t(Z)
+  el <- which(upper.tri(Z) & Z == 1, arr.ind = TRUE)
+
+  # Matrix neighborhood
+  o_mat <- iglm.data(
+    x_attribute = rep(0, 4), y_attribute = rep(0, 4), z_network = el, neighborhood = B,
+    directed = FALSE, n_units = 4, fix_x = TRUE, fix_z_alocal = FALSE
+  )
+  # Edgelist neighborhood
+  o_el <- iglm.data(
+    x_attribute = rep(0, 4), y_attribute = rep(0, 4), z_network = el, neighborhood = which(B == 1, arr.ind = TRUE),
+    directed = FALSE, n_units = 4, fix_x = TRUE, fix_z_alocal = FALSE
+  )
+
+  # Overlap should be identical regardless of whether B was supplied as matrix or edgelist
+  expect_equal(nrow(o_mat$overlap), nrow(o_el$overlap))
+  expect_true(any(o_mat$overlap[, 1] == 2 & o_mat$overlap[, 2] == 3))
+
+  # Transitive statistic must never have overlapping == 0 when transitive == 1
+  m <- iglm(o_mat ~ edges(mode = "alocal") + transitive + degrees,
+            control = control.iglm(estimate_model = FALSE, return_z = TRUE))
+  r <- m$estimate()$res_z
+  for (row_idx in seq_len(nrow(r))) {
+    if (r[row_idx, "transitive"] > 0) {
+      expect_equal(unname(r[row_idx, "overlapping"]), 1)
+    }
+  }
+})
+
+test_that("iglm.data validation rejects attribute length mismatches", {
+  expect_error(
+    iglm.data(x_attribute = c(1, 2), n_units = 5),
+    "Length of 'x_attribute' must be equal to 'n_units'."
+  )
+  expect_error(
+    iglm.data(y_attribute = c(1, 2, 3), n_units = 5),
+    "Length of 'y_attribute' must be equal to 'n_units'."
+  )
+})
+
+test_that("iglm.data.list subsetting supports positive, negative, and logical indices", {
+  n <- 4
+  dat <- iglm.data(n_units = n, directed = FALSE)
+  smp <- sampler.iglm(n_simulation = 3, n_burn_in = 2)
+  sims <- simulate_iglm(dat ~ edges(), coef = -1, sampler = smp, only_stats = FALSE)
+  sample_list <- sims$samples
+
+  expect_s3_class(sample_list, "iglm.data.list")
+  expect_equal(length(sample_list), 3L)
+
+  # Verify lazy neighborhood storage: raw items do not have neighborhood populated
+  expect_equal(nrow(unclass(sample_list)[[1]]$neighborhood), 0L)
+  expect_equal(nrow(unclass(sample_list)[[2]]$neighborhood), 0L)
+
+  # Positive subsetting: preserves iglm.data.list and keeps elements unpopulated
+  sub_pos <- sample_list[1:2]
+  expect_s3_class(sub_pos, "iglm.data.list")
+  expect_equal(length(sub_pos), 2L)
+  expect_equal(nrow(unclass(sub_pos)[[1]]$neighborhood), 0L)
+  expect_equal(nrow(unclass(sub_pos)[[2]]$neighborhood), 0L)
+
+  # Negative subsetting
+  sub_neg <- sample_list[-1]
+  expect_s3_class(sub_neg, "iglm.data.list")
+  expect_equal(length(sub_neg), 2L)
+
+  # Logical subsetting
+  sub_log <- sample_list[c(TRUE, FALSE, TRUE)]
+  expect_s3_class(sub_log, "iglm.data.list")
+  expect_equal(length(sub_log), 2L)
+
+  # Empty subsetting
+  sub_empty <- sample_list[0]
+  expect_s3_class(sub_empty, "iglm.data.list")
+  expect_equal(length(sub_empty), 0L)
+
+  # Full subsetting via missing index
+  sub_all <- sample_list[]
+  expect_s3_class(sub_all, "iglm.data.list")
+  expect_equal(length(sub_all), 3L)
+
+  # Element extraction [[ attaches neighborhood ON DEMAND
+  elem2 <- sample_list[[2]]
+  expect_s3_class(elem2, "iglm.data")
+  expect_equal(elem2$n_units, n)
+  expect_gt(nrow(elem2$neighborhood), 0L)
+  # Unaccessed item 1 in sample_list remains unpopulated
+  expect_equal(nrow(unclass(sample_list)[[1]]$neighborhood), 0L)
+
+  # Out of bounds [[
+  expect_error(sample_list[[10]])
+  expect_error(sample_list[[c(1, 2)]])
+
+  # statistics() on empty iglm.data.list returns 0x0 matrix
+  stats_empty <- statistics(sub_empty ~ edges())
+  expect_equal(dim(stats_empty), c(0L, 0L))
+})
+
+test_that("iglm.data save and load errors format quotes properly", {
+  expect_error(
+    iglm.data(file = "non_existent_file.rds"),
+    regexp = "File 'non_existent_file.rds' does not exist.",
+    fixed = TRUE
+  )
+
+  dat <- iglm.data(n_units = 4, directed = FALSE)
+  expect_error(
+    dat$save(file = "invalid_extension.txt"),
+    regexp = "File extension must be '.rds'",
+    fixed = TRUE
+  )
+})
+
+test_that("iglm.data save and load preserves family_x and family_y", {
+  tmp_file <- tempfile(fileext = ".rds")
+  on.exit(unlink(tmp_file), add = TRUE)
+
+  dat <- iglm.data(
+    x_attribute = c(1, 2, 3),
+    y_attribute = c(0.5, 1.5, 2.5),
+    family_x = "poisson",
+    family_y = "normal",
+    directed = FALSE
+  )
+  dat$save(file = tmp_file)
+
+  dat_loaded <- iglm.data(file = tmp_file)
+  expect_equal(dat_loaded$family_x, "poisson")
+  expect_equal(dat_loaded$family_y, "normal")
+})
+
+test_that("iglm.data.neighborhood does not enforce closed neighborhood (no diagonal 1s added)", {
+  # Adjacency with 0 diagonal
+  nb_adj <- matrix(c(0, 1, 1, 0), nrow = 2, ncol = 2)
+  res_nb <- iglm.data.neighborhood(neighborhood = nb_adj, n_units = 2, directed = FALSE)
+  # Neighborhood should NOT contain self loops (1, 1) or (2, 2)
+  expect_false(any(res_nb$neighborhood[, 1] == res_nb$neighborhood[, 2]))
+
+  # Edgelist without self loops
+  nb_el <- matrix(c(1, 2, 2, 1), ncol = 2, byrow = TRUE)
+  res_nb2 <- iglm.data.neighborhood(neighborhood = nb_el, n_units = 2, directed = FALSE)
+  expect_false(any(res_nb2$neighborhood[, 1] == res_nb2$neighborhood[, 2]))
+})
+
+test_that("iglm.data$plot works and accepts extra ... arguments", {
+  dat <- iglm.data(z_network = matrix(c(0, 1, 0, 0), 2, 2), n_units = 2)
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  expect_no_error(dat$plot(main = "Test Plot"))
+})
+
+test_that("iglm.data correctly infers n_units for 2x2 adjacency matrices", {
+  # 2x2 network adjacency matrix
+  dat_z <- iglm.data(z_network = matrix(c(0, 1, 1, 0), 2, 2), directed = FALSE)
+  expect_equal(dat_z$n_units, 2)
+
+  # 2x2 neighborhood matrix
+  dat_nb <- iglm.data(neighborhood = matrix(1, 2, 2), directed = FALSE)
+  expect_equal(dat_nb$n_units, 2)
+
+  # 2x2 network and neighborhood together
+  dat_both <- iglm.data(
+    z_network = matrix(c(0, 1, 1, 0), 2, 2),
+    neighborhood = matrix(1, 2, 2),
+    directed = FALSE
+  )
+  expect_equal(dat_both$n_units, 2)
+})
+
+test_that("iglm.data defaults fix_z_alocal to FALSE", {
+  dat <- iglm.data(z_network = matrix(0, 3, 3), neighborhood = matrix(1, 3, 3), directed = FALSE)
+  expect_false(dat$fix_z_alocal)
+})
+
+
+
+
+
 

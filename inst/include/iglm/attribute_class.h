@@ -1,8 +1,3 @@
-#define ARMA_DONT_USE_BLAS
-#define ARMA_DONT_USE_OPENMP
-#define ARMA_DONT_USE_NEWARP
-#define ARMA_DONT_USE_ARPACK
-
 #ifndef attribute_H
 #define attribute_H
 
@@ -37,10 +32,6 @@ public:
   }
   
   bool check() const;
-  
-  int get_sum() const {
-    return(attribute.size());
-  }
   
   double get_val(int from) const {
     if(from < 1 || from > n_units) return 0.0;

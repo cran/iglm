@@ -97,7 +97,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       }
 
       if (!is.logical(private$.fix_z_alocal)) {
-        stop("`fix_z_alocal` must be a logical value (TRUE or FALSE).", call. = FALSE)
+        stop("'fix_z_alocal' must be a logical value (TRUE or FALSE).", call. = FALSE)
       }
       if (private$.family_y == "poisson" && !any(is.na(private$.y_attribute)) && !all(floor(private$.y_attribute) == private$.y_attribute & private$.y_attribute >= 0)) {
         errors <- c(errors, "For 'poisson' family, 'y_attribute' must be a vector of non-negative integers.")
@@ -192,7 +192,8 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #'   during model estimation and simulation. Default is `FALSE`.
     #' @param fix_z Logical. If `TRUE`, the `z_network` is treated as fixed
     #'  during model estimation and simulation. Default is `FALSE`.
-    #' @param fix_z_alocal Logical. If `TRUE` (default), alocal dyads in the neighborhood are fixed.
+    #' @param fix_z_alocal Logical. If `TRUE`, edges outside the overlap region
+    #'   (alocal dyads) are fixed. Default is `FALSE`.
     #' @param return_neighborhood Logical. If `TRUE` (default) and
     #'   `neighborhood` is `NULL`, a full neighborhood (all dyads) is
     #'   generated implying global dependence. If `FALSE`, no neighborhood is set.
@@ -209,7 +210,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
                           scale_y = 1,
                           fix_x = FALSE,
                           fix_z = FALSE,
-                          fix_z_alocal = TRUE,
+                          fix_z_alocal = FALSE,
                           return_neighborhood = TRUE,
                           file = NULL,
                           label_x = "x",
@@ -223,7 +224,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       # browser()
       if (!is.null(file)) {
         if (!file.exists(file)) {
-          stop(paste("File", file, "does not exist."))
+          stop(paste0("File '", file, "' does not exist."))
         }
         data_loaded <- readRDS(file)
         if (is.list(data_loaded) && !"n_units" %in% names(data_loaded) && "n_actor" %in% names(data_loaded)) {
@@ -244,8 +245,8 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         neighborhood <- data_loaded$neighborhood
         directed <- data_loaded$directed
         n_units <- data_loaded$n_units
-        type_x <- data_loaded$family_x
-        type_y <- data_loaded$family_y
+        family_x <- data_loaded$family_x
+        family_y <- data_loaded$family_y
         scale_x <- data_loaded$scale_x
         scale_y <- data_loaded$scale_y
         fix_x <- data_loaded$fix_x
@@ -283,44 +284,12 @@ iglm.data_generator <- R6::R6Class("iglm.data",
 
       private$.descriptives <- list()
 
-      if (return_neighborhood) {
-        if (is.null(neighborhood)) {
-          if (is.na(n_units)) {
-            stop("n_units must be provided if neighborhood is not provided.")
-          }
-          neighborhood <- expand.grid(1:n_units, 1:n_units)
-          neighborhood <- neighborhood[neighborhood$Var1 != neighborhood$Var2, ]
-          neighborhood <- as.matrix(neighborhood)
-        }
-      }
-      if (is.null(z_network)) {
-        private$.z_network <- matrix(0, nrow = 0, ncol = 2)
-      } else {
-        private$.z_network <- z_network
-      }
-      if (ncol(private$.z_network) > 2) {
-        if (!directed) {
-          private$.z_network[lower.tri(private$.z_network)] <- 0
-        }
-        private$.z_network <- which(private$.z_network == 1, arr.ind = T)
-      }
-
-      if (!directed) {
-        wrong_tmp <- private$.z_network[, 1] > private$.z_network[, 2]
-        correct_tmp <- private$.z_network[, 1] < private$.z_network[, 2]
-        private$.z_network <- rbind(
-          private$.z_network[correct_tmp, c(1, 2)],
-          private$.z_network[wrong_tmp, c(2, 1)]
-        )
-        private$.z_network <- private$.z_network[!duplicated(private$.z_network), ]
-        private$.z_network <- matrix(private$.z_network, ncol = 2)
-      } else {
-        private$.z_network <- matrix(private$.z_network, ncol = 2)
-      }
-
       if (is.na(n_units)) {
-        if (return_neighborhood) {
-          if (ncol(neighborhood) > 2) {
+        if (return_neighborhood && !is.null(neighborhood)) {
+          is_adj_nb <- (is.matrix(neighborhood) || inherits(neighborhood, "Matrix")) &&
+            nrow(neighborhood) == ncol(neighborhood) &&
+            (ncol(neighborhood) > 2 || any(neighborhood == 0) || all(neighborhood == 1))
+          if (is_adj_nb) {
             private$.n_units <- nrow(neighborhood)
           } else {
             private$.n_units <- max(neighborhood)
@@ -329,10 +298,15 @@ iglm.data_generator <- R6::R6Class("iglm.data",
           private$.n_units <- length(x_attribute)
         } else if (!is.null(y_attribute)) {
           private$.n_units <- length(y_attribute)
-        } else if (ncol(z_network) > 2) {
-          private$.n_units <- nrow(z_network)
-        } else {
-          private$.n_units <- max(z_network)
+        } else if (!is.null(z_network)) {
+          is_adj_z <- (is.matrix(z_network) || inherits(z_network, "Matrix")) &&
+            nrow(z_network) == ncol(z_network) &&
+            (ncol(z_network) > 2 || any(z_network == 0) || all(z_network == 1))
+          if (is_adj_z) {
+            private$.n_units <- nrow(z_network)
+          } else {
+            private$.n_units <- max(z_network)
+          }
         }
       } else {
         private$.n_units <- n_units
@@ -343,20 +317,26 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (is.na(private$.n_units)) {
         stop("n_units could not be inferred. Please provide n_units.")
       }
-      if (is.null(x_attribute) | (length(x_attribute) != private$.n_units)) {
-        private$.x_attribute <- numeric(length = private$.n_units)
+
+      if (is.null(z_network)) {
+        private$.z_network <- matrix(0, nrow = 0, ncol = 2)
       } else {
-        private$.x_attribute <- x_attribute
+        private$.z_network <- z_network
       }
-      if (is.null(y_attribute) | (length(y_attribute) != private$.n_units)) {
-        private$.y_attribute <- numeric(length = private$.n_units)
-      } else {
-        private$.y_attribute <- y_attribute
+      is_z_adj <- (ncol(private$.z_network) > 2) || (nrow(private$.z_network) == private$.n_units && ncol(private$.z_network) == private$.n_units && (private$.n_units > 2 || any(private$.z_network == 0) || all(private$.z_network == 1)))
+      if (is_z_adj) {
+        if (!is.na(directed) && !directed) {
+          private$.z_network[lower.tri(private$.z_network)] <- 0
+        }
+        private$.z_network <- which(private$.z_network == 1, arr.ind = TRUE)
       }
+
       if (is.na(directed)) {
         if (ncol(private$.z_network) == 2) {
           z_network_tmp <- matrix(0, nrow = private$.n_units, ncol = private$.n_units)
-          z_network_tmp[private$.z_network] <- 1
+          if (nrow(private$.z_network) > 0) {
+            z_network_tmp[private$.z_network] <- 1
+          }
           private$.directed <- !isSymmetric(z_network_tmp)
         } else {
           private$.directed <- !isSymmetric(private$.z_network)
@@ -364,36 +344,60 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       } else {
         private$.directed <- directed
       }
+
+      if (!private$.directed && ncol(private$.z_network) == 2 && nrow(private$.z_network) > 0) {
+        wrong_tmp <- private$.z_network[, 1] > private$.z_network[, 2]
+        correct_tmp <- private$.z_network[, 1] < private$.z_network[, 2]
+        private$.z_network <- rbind(
+          private$.z_network[correct_tmp, c(1, 2), drop = FALSE],
+          private$.z_network[wrong_tmp, c(2, 1), drop = FALSE]
+        )
+        private$.z_network <- private$.z_network[!duplicated(private$.z_network), , drop = FALSE]
+        private$.z_network <- matrix(private$.z_network, ncol = 2)
+      } else {
+        private$.z_network <- matrix(private$.z_network, ncol = 2)
+      }
+
+      if (is.null(x_attribute) || length(x_attribute) == 0) {
+        private$.x_attribute <- numeric(length = private$.n_units)
+      } else {
+        private$.x_attribute <- x_attribute
+      }
+      if (is.null(y_attribute) || length(y_attribute) == 0) {
+        private$.y_attribute <- numeric(length = private$.n_units)
+      } else {
+        private$.y_attribute <- y_attribute
+      }
+
       if (return_neighborhood) {
-        if (ncol(neighborhood) == 2) {
-          sp_nb <- spMatrix(
-            nrow = private$.n_units, ncol = private$.n_units,
-            i = neighborhood[, 1], j = neighborhood[, 2],
-            x = rep(1, length(neighborhood[, 2]))
-          )
-          sp_nb_trans <- sparseMatrix(i = sp_nb@j + 1, j = sp_nb@i + 1, dims = sp_nb@Dim)
-
-          overlap <- sp_nb %*% sp_nb_trans
-          overlap <- as(overlap, "TsparseMatrix")
-          overlap <- cbind(
-            overlap@i + 1,
-            overlap@j + 1
-          )
-          private$.overlap <- overlap[overlap[, 1] != overlap[, 2], ]
-          private$.neighborhood <- neighborhood
-        } else {
-          positions <- which(neighborhood == 1, arr.ind = T)
-          sp_nb <- spMatrix(
-            nrow = ncol(neighborhood), ncol = ncol(neighborhood),
-            i = positions[, 1], j = positions[, 2], x = rep(1, length(positions[, 2]))
-          )
-          sp_nb_trans <- sparseMatrix(i = sp_nb@j + 1, j = sp_nb@i + 1, dims = sp_nb@Dim)
-
-          overlap <- as.matrix(sp_nb %*% sp_nb_trans > 0)
-          diag(overlap) <- 0
-          private$.overlap <- which(overlap == 1, arr.ind = T)
-          private$.neighborhood <- which(neighborhood == 1, arr.ind = T)
+        if (is.null(neighborhood)) {
+          neighborhood <- as.matrix(expand.grid(seq_len(private$.n_units), seq_len(private$.n_units)))
         }
+        is_nb_adj <- (ncol(neighborhood) > 2) || (nrow(neighborhood) == private$.n_units && ncol(neighborhood) == private$.n_units && (private$.n_units > 2 || any(neighborhood == 0) || all(neighborhood == 1)))
+        if (is_nb_adj) {
+          if (!private$.directed) {
+            neighborhood <- pmax(neighborhood, t(neighborhood))
+          }
+          neighborhood <- which(neighborhood > 0, arr.ind = TRUE)
+        } else {
+          if (!private$.directed) {
+            neighborhood <- rbind(neighborhood, neighborhood[, c(2, 1)])
+          }
+          neighborhood <- neighborhood[!duplicated(neighborhood), , drop = FALSE]
+        }
+
+        # Calculate overlap: off-diagonal entries with overlapping closed neighborhoods (N %*% t(N) > 0)
+        # Direct neighborhood ties and shared partners have non-empty neighborhood intersection;
+        # diagonal entries (c_ii = 0) are excluded.
+        sp_nb <- sparseMatrix(
+          i = neighborhood[, 1], j = neighborhood[, 2], x = 1,
+          dims = c(private$.n_units, private$.n_units)
+        )
+        overlap_mat <- as(sp_nb %*% Matrix::t(sp_nb), "TsparseMatrix")
+        overlap <- cbind(overlap_mat@i + 1L, overlap_mat@j + 1L)
+        overlap <- overlap[overlap[, 1] != overlap[, 2], , drop = FALSE]
+        private$.overlap <- overlap[!duplicated(overlap), , drop = FALSE]
+        private$.neighborhood <- neighborhood
       } else {
         private$.overlap <- matrix(0, nrow = 0, ncol = 2)
       }
@@ -407,11 +411,12 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #'  edgelist or a square adjacency matrix.
     #'  @return The `iglm.data` object itself (`self`), invisibly.
     set_z_network = function(z_network) {
-      if (ncol(z_network) > 2) {
+      is_z_adj <- (ncol(z_network) > 2) || (nrow(z_network) == private$.n_units && ncol(z_network) == private$.n_units && (private$.n_units > 2 || any(z_network == 0) || all(z_network == 1)))
+      if (is_z_adj) {
         if (!private$.directed) {
           z_network[lower.tri(z_network)] <- 0
         }
-        z_network <- which(z_network == 1, arr.ind = T)
+        z_network <- which(z_network == 1, arr.ind = TRUE)
       }
       if (!private$.directed && ncol(z_network) == 2 && nrow(z_network) > 0) {
         wrong_tmp <- z_network[, 1] > z_network[, 2]
@@ -497,7 +502,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @return The `iglm.data` object itself (`self`), invisibly.
     set_label_x = function(label_x) {
       if (!is.character(label_x) || length(label_x) != 1 || is.na(label_x) || nchar(trimws(label_x)) == 0) {
-        stop("`label_x` must be a single non-empty character string.", call. = FALSE)
+        stop("'label_x' must be a single non-empty character string.", call. = FALSE)
       }
       private$.label_x <- as.character(label_x)
       invisible(self)
@@ -508,7 +513,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @return The `iglm.data` object itself (`self`), invisibly.
     set_label_y = function(label_y) {
       if (!is.character(label_y) || length(label_y) != 1 || is.na(label_y) || nchar(trimws(label_y)) == 0) {
-        stop("`label_y` must be a single non-empty character string.", call. = FALSE)
+        stop("'label_y' must be a single non-empty character string.", call. = FALSE)
       }
       private$.label_y <- as.character(label_y)
       invisible(self)
@@ -519,7 +524,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @return The `iglm.data` object itself (`self`), invisibly.
     set_label_z = function(label_z) {
       if (!is.character(label_z) || length(label_z) != 1 || is.na(label_z) || nchar(trimws(label_z)) == 0) {
-        stop("`label_z` must be a single non-empty character string.", call. = FALSE)
+        stop("'label_z' must be a single non-empty character string.", call. = FALSE)
       }
       private$.label_z <- as.character(label_z)
       invisible(self)
@@ -555,7 +560,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @param fix_z_alocal A logical value indicating whether alocal edges should be treated as fixed or not.
     set_fix_z_alocal = function(fix_z_alocal) {
       if (!is.logical(fix_z_alocal)) {
-        stop("`fix_z_alocal` must be a logical value (TRUE or FALSE).", call. = FALSE)
+        stop("'fix_z_alocal' must be a logical value (TRUE or FALSE).", call. = FALSE)
       }
       private$.fix_z_alocal <- fix_z_alocal
       private$.validate()
@@ -608,7 +613,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       }
       extension <- tools::file_ext(file)
       if (tolower(extension) != "rds") {
-        stop("File extension must be .rds", call. = FALSE)
+        stop("File extension must be '.rds'", call. = FALSE)
       }
 
       data_to_save <- self$gather()
@@ -664,7 +669,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @description
     #' Calculates the distribution of the `x_attribute`.
     #' @param value_range (numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.
-    #' @param prob (logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.
+    #' @param prob (logical) If `TRUE` (default), returns proportions; if `FALSE`, returns counts.
     #' @param plot (logical) If `TRUE` (default), plots the distribution using a density plot for continuous data or a bar plot for discrete data.
     #' @return A numeric vector representing the distribution of `x_attribute` (invisible).
     x_distribution = function(value_range = NULL, prob = TRUE, plot = TRUE) {
@@ -697,7 +702,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
             main = "Distribution of x_attribute",
             xlab = "x_attribute values",
             ylim = c(0, max(info) * 1.2),
-            ylab = ifelse(prob, "Probability", "Frequency")
+            ylab = ifelse(prob, "Proportion", "Count")
           )
         }
       }
@@ -715,7 +720,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #' @description
     #' Calculates the distribution of the `y_attribute`.
     #' @param value_range (numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.
-    #' @param prob (logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.
+    #' @param prob (logical) If `TRUE` (default), returns proportions; if `FALSE`, returns counts.
     #' @param plot (logical) If `TRUE` (default), plots the distribution using a density plot for continuous data or a bar plot for discrete data.
     #' @return A numeric vector representing the distribution of `y_attribute` (invisible).
     y_distribution = function(value_range = NULL, prob = TRUE, plot = TRUE) {
@@ -746,7 +751,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
           barplot(info,
             main = "Distribution of y_attribute",
             ylim = c(0, max(info) * 1.2),
-            xlab = "y_attribute values", ylab = ifelse(prob, "Probability", "Frequency")
+            xlab = "y_attribute values", ylab = ifelse(prob, "Proportion", "Count")
           )
         }
       }
@@ -873,22 +878,36 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     #'  Can be a 2-column edgelist or a square adjacency matrix.
     #' @return None. Updates the internal neighborhood and overlap matrices.
     set_neighborhood_overlap = function(neighborhood, overlap) {
-      if (!is.matrix(neighborhood)) {
+      if (!is.matrix(neighborhood) && !inherits(neighborhood, "Matrix")) {
         stop("'neighborhood' must be a matrix or a sparse Matrix object.")
       }
-      if (ncol(neighborhood) > 2) {
-        private$.neighborhood <- which(neighborhood == 1, arr.ind = T)
+      is_nb_adj <- (ncol(neighborhood) > 2) || (nrow(neighborhood) == private$.n_units && ncol(neighborhood) == private$.n_units && (private$.n_units > 2 || any(neighborhood == 0) || all(neighborhood == 1)))
+      if (is_nb_adj) {
+        if (!private$.directed) {
+          neighborhood <- pmax(neighborhood, t(neighborhood))
+        }
+        private$.neighborhood <- which(neighborhood > 0, arr.ind = TRUE)
       } else {
+        if (!private$.directed) {
+          neighborhood <- rbind(neighborhood, neighborhood[, c(2, 1)])
+        }
+        neighborhood <- neighborhood[!duplicated(neighborhood), , drop = FALSE]
         private$.neighborhood <- neighborhood
       }
 
-      if (!is.matrix(overlap)) {
+      if (!is.matrix(overlap) && !inherits(overlap, "Matrix")) {
         stop("'overlap' must be a matrix or a sparse Matrix object.")
       }
-      if (ncol(overlap) > 2) {
-        private$.overlap <- which(overlap == 1, arr.ind = T)
+      is_ov_adj <- (ncol(overlap) > 2) || (nrow(overlap) == private$.n_units && ncol(overlap) == private$.n_units && (private$.n_units > 2 || any(overlap == 0) || all(overlap == 1)))
+      if (is_ov_adj) {
+        diag(overlap) <- 0
+        private$.overlap <- which(overlap > 0, arr.ind = TRUE)
       } else {
-        private$.overlap <- overlap
+        if (nrow(overlap) > 0) {
+          overlap <- rbind(overlap, overlap[, c(2, 1)])
+        }
+        private$.overlap <- overlap[overlap[, 1] != overlap[, 2], , drop = FALSE]
+        private$.overlap <- private$.overlap[!duplicated(private$.overlap), , drop = FALSE]
       }
       private$.descriptives <- list()
       invisible(self)
@@ -1052,11 +1071,13 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (!mode %in% c("global", "local")) {
         stop("'mode' must be either 'global' or 'local'.")
       }
-      if (!is.null(value_range) && length(value_range) != 2) {
-        stop("'value_range' must be a numeric vector of length 2.")
-      }
-      if (sum(value_range < 0) > 0) {
-        stop("'value_range' values must be non-negative.")
+      if (!is.null(value_range)) {
+        if (length(value_range) != 2) {
+          stop("'value_range' must be a numeric vector of length 2.")
+        }
+        if (any(value_range < 0, na.rm = TRUE) || any(is.na(value_range))) {
+          stop("'value_range' values must be non-negative.")
+        }
       }
       has_i_constr <- !is.null(x_i) || !is.null(y_i)
       has_j_constr <- !is.null(x_j) || !is.null(y_j)
@@ -1112,7 +1133,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         private$.descriptives$geodesic_distances_distribution[[key]] <- info
       }
       if (plot) {
-        prefix <- paste0("Geodesic Distance", if (mode == "local") " (Local)" else "")
+        prefix <- paste0(if (mode == "local") "Local " else "", "Geodesic Distance")
         barplot(info,
           ylim = c(0, max(info) * 1.2),
           xlab = build_constrained_xlab(prefix, x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
@@ -1339,11 +1360,13 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (private$.directed && type == "symm") {
         stop("Type 'symm' is only for undirected networks.")
       }
-      if (!is.null(value_range) && length(value_range) != 2) {
-        stop("'value_range' must be a numeric vector of length 2.")
-      }
-      if (sum(value_range < 0) > 0) {
-        stop("'value_range' values must be non-negative.")
+      if (!is.null(value_range)) {
+        if (length(value_range) != 2) {
+          stop("'value_range' must be a numeric vector of length 2.")
+        }
+        if (any(value_range < 0, na.rm = TRUE) || any(is.na(value_range))) {
+          stop("'value_range' values must be non-negative.")
+        }
       }
 
       has_i_constr <- !is.null(x_i) || !is.null(y_i)
@@ -1389,7 +1412,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       }
 
       if (plot) {
-        base_lab <- paste0("Number of ", type, if (mode == "local") " (Local)" else "", "- Edgewise Shared Partners")
+        base_lab <- paste0(if (mode == "local") "Local " else "", "Number of ", type, "- Edgewise Shared Partners")
         barplot(info_table,
           ylim = c(0, max(info_table) * 1.2),
           xlab = build_constrained_xlab(base_lab, x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
@@ -1439,11 +1462,13 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (private$.directed && type == "symm") {
         stop("Type 'symm' is only for undirected networks.")
       }
-      if (!is.null(value_range) && length(value_range) != 2) {
-        stop("'value_range' must be a numeric vector of length 2.")
-      }
-      if (sum(value_range < 0) > 0) {
-        stop("'value_range' values must be non-negative.")
+      if (!is.null(value_range)) {
+        if (length(value_range) != 2) {
+          stop("'value_range' must be a numeric vector of length 2.")
+        }
+        if (any(value_range < 0, na.rm = TRUE) || any(is.na(value_range))) {
+          stop("'value_range' values must be non-negative.")
+        }
       }
 
       has_i_constr <- !is.null(x_i) || !is.null(y_i)
@@ -1500,7 +1525,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       }
 
       if (plot) {
-        base_lab <- paste0("Number of ", type, if (mode == "local") " (Local)" else "", "- Dyadwise Shared Partners")
+        base_lab <- paste0(if (mode == "local") "Local " else "", "Number of ", type, "- Dyadwise Shared Partners")
         barplot(info_table,
           xlab = build_constrained_xlab(base_lab, x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
           ylab = ifelse(prob, "Proportion", "Count"),
@@ -1676,16 +1701,15 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         }
 
         if (plot) {
-          op <- par(no.readonly = TRUE)
-          on.exit(par(op))
-          par(mfrow = c(1, 2))
+          prefix_out <- if (mode == "local") "Local Outdegree" else "Outdegree"
+          prefix_in <- if (mode == "local") "Local Indegree" else "Indegree"
           barplot(info_out,
-            xlab = build_constrained_xlab("Out-Degree", x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
+            xlab = build_constrained_xlab(prefix_out, x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
             ylab = ifelse(prob, "Proportion", "Count"),
             las = 1, ylim = c(0, max(info_out) * 1.2)
           )
           barplot(info_in,
-            xlab = build_constrained_xlab("In-Degree", x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
+            xlab = build_constrained_xlab(prefix_in, x_i, x_j, y_i, y_j, family_x = private$.family_x, family_y = private$.family_y),
             ylab = ifelse(prob, "Proportion", "Count"),
             las = 1, ylim = c(0, max(info_in) * 1.2)
           )
@@ -1858,7 +1882,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         }
 
         edges_x_y <- matrix(
-          z_net_all[(z_net_all[, 1] %in% units_sender) & (z_net_all[, 2] %in% units_receiver), ],
+          z_net_all[(z_net_all[, 1] %in% units_sender) & (z_net_all[, 2] %in% units_receiver), , drop = FALSE],
           ncol = 2
         )
 
@@ -1872,7 +1896,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
           )
 
           overlap_tmp <- matrix(
-            private$.overlap[(private$.overlap[, 1] %in% units_sender) & (private$.overlap[, 2] %in% units_receiver), ],
+            private$.overlap[(private$.overlap[, 1] %in% units_sender) & (private$.overlap[, 2] %in% units_receiver), , drop = FALSE],
             ncol = 2
           )
           if (nrow(overlap_tmp) > 0) {
@@ -2094,7 +2118,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       # --- build igraph object from edge list
 
       if (!private$.directed) {
-        g <- igraph::graph_from_edgelist(as.matrix(private$.z_network[private$.z_network[, 1] < private$.z_network[, 2], ]),
+        g <- igraph::graph_from_edgelist(as.matrix(private$.z_network[private$.z_network[, 1] < private$.z_network[, 2], , drop = FALSE]),
           directed = private$.directed
         )
       } else {
@@ -2157,7 +2181,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       } else {
         # sanity: make sure dimensions match
         if (!is.matrix(coords) || nrow(coords) != igraph::vcount(g) || ncol(coords) < 2) {
-          stop("`coords` must be a matrix with nrow = vcount(g) and at least 2 columns.")
+          stop("'coords' must be a matrix with nrow = vcount(g) and at least 2 columns.")
         }
       }
       if (show_overlap && !is.null(private$.neighborhood) && nrow(private$.neighborhood) > 0) {
@@ -2190,6 +2214,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         edge.arrow.size = edge.arrow.size,
         add = add_mode,
         layout = coords,
+        ...
       )
 
       if (!is.null(color_attr) || !is.null(size_attr)) {
@@ -2260,7 +2285,22 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       dir_flag <- isTRUE(private$.directed)
 
       m_z <- nrow(private$.z_network)
-      m_nb <- nrow(private$.neighborhood)
+      total_dyads <- if (n < 2) 0 else if (dir_flag) n * (n - 1) else (n * (n - 1)) / 2
+      n_overlap <- if (is.null(private$.overlap) || nrow(private$.overlap) == 0) {
+        0
+      } else if (dir_flag) {
+        nrow(private$.overlap)
+      } else {
+        sum(private$.overlap[, 1] < private$.overlap[, 2])
+      }
+      pct_overlap <- if (total_dyads > 0) (n_overlap / total_dyads) * 100 else 0
+      overlap_str <- sprintf(
+        "%s / %s (%.1f%%)",
+        format(n_overlap, trim = TRUE),
+        format(total_dyads, trim = TRUE),
+        pct_overlap
+      )
+
       numfmt <- function(v) format(v, digits = digits, trim = TRUE)
 
       summarize_attr <- function(v, family, scale) {
@@ -2302,8 +2342,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
         sprintf("connections (fixed = %s)", private$.fix_z)
       }
       cat(sprintf("  %-*s: %s\n", w, edge_label, m_z))
-
-      cat(sprintf("  %-*s: %s\n", w, "neighborhood connections", m_nb))
+      cat(sprintf("  %-*s: %s\n", w, "local dyads", overlap_str))
       cat("\nAttribute summaries\n")
 
       x_label <- if (private$.label_x != "x") {
@@ -2360,7 +2399,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (missing(value)) {
         if (is.null(private$.neighborhood)) matrix(0, nrow = 0, ncol = 2) else private$.neighborhood
       } else {
-        stop("`neighborhood` is read-only.", call. = FALSE)
+        stop("'neighborhood' is read-only.", call. = FALSE)
       }
     },
 
@@ -2369,26 +2408,26 @@ iglm.data_generator <- R6::R6Class("iglm.data",
       if (missing(value)) {
         if (is.null(private$.overlap)) matrix(0, nrow = 0, ncol = 2) else private$.overlap
       } else {
-        stop("`overlap` is read-only.", call. = FALSE)
+        stop("'overlap' is read-only.", call. = FALSE)
       }
     },
 
     #' @field directed (`logical`) Indicates if the `z_network` is treated as directed.
     directed = function(value) {
-      if (missing(value)) private$.directed else stop("`directed` is read-only.", call. = FALSE)
+      if (missing(value)) private$.directed else stop("'directed' is read-only.", call. = FALSE)
     },
 
     #' @field n_units (`integer`) The total number of units (nodes) in the network.
     n_units = function(value) {
-      if (missing(value)) private$.n_units else stop("`n_units` is read-only.", call. = FALSE)
+      if (missing(value)) private$.n_units else stop("'n_units' is read-only.", call. = FALSE)
     },
     #' @field n_actor (`integer`) Deprecated alias for `n_units`.
     n_actor = function(value) {
       if (missing(value)) {
-        warning("`n_actor` is deprecated, please use `n_units`.", call. = FALSE)
+        warning("'n_actor' is deprecated, please use 'n_units'.", call. = FALSE)
         private$.n_units
       } else {
-        stop("`n_actor` is read-only.", call. = FALSE)
+        stop("'n_actor' is read-only.", call. = FALSE)
       }
     },
     #' @field family_x (`character`) The specified distribution family for the `x_attribute`.
@@ -2411,15 +2450,15 @@ iglm.data_generator <- R6::R6Class("iglm.data",
     fix_x = function(value) {
       if (missing(value)) private$.fix_x else self$set_fix_x(value)
     },
-    #' @field fix_z (`logical`) RIndicates if the `z_network` is fixed during estimation/simulation.
+    #' @field fix_z (`logical`) Indicates if the `z_network` is fixed during estimation/simulation.
     fix_z = function(value) {
       if (missing(value)) private$.fix_z else self$set_fix_z(value)
     },
-    #' @field descriptives (`list`)A list storing computed descriptive statistics for the network and attributes.
+    #' @field descriptives (`list`) A list storing computed descriptive statistics for the network and attributes.
     descriptives = function(value) {
-      if (missing(value)) private$.descriptives else stop("`descriptives` is read-only.", call. = FALSE)
+      if (missing(value)) private$.descriptives else stop("'descriptives' is read-only.", call. = FALSE)
     },
-    #' @field fix_z_alocal (`logical`) Flag indicating whether nonoverlap edges are treated as random.
+    #' @field fix_z_alocal (`logical`) Flag indicating whether nonoverlap (alocal) edges are treated as fixed.
     fix_z_alocal = function(value) {
       if (missing(value)) private$.fix_z_alocal else self$set_fix_z_alocal(value)
     }
@@ -2429,7 +2468,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
 #' Constructor for the iglm.data R6 object
 #'
 #' @description
-#' Creates a `iglm.data` object, which stores network and attribute data.
+#' Creates an `iglm.data` object, which stores network and attribute data.
 #' This function acts as a user-friendly interface to the `iglm.data` R6 class generator.
 #' It handles data input, infers parameters like the number of units (`n_units`)
 #' and network directedness (`directed`) if not explicitly provided, processes
@@ -2465,10 +2504,10 @@ iglm.data_generator <- R6::R6Class("iglm.data",
 #'   during estimation/simulation (fixed design in regression). Default is `FALSE`.
 #' @param fix_z (logical) If `TRUE`, the 'z' network is held fixed
 #'   during estimation/simulation (fixed network design). Default is `FALSE`.
-#'   Setting this to TRUE, allows practicioners to estimate autologistic unit attribute models,
+#'   Setting this to TRUE, allows practitioners to estimate autologistic unit attribute models,
 #'   which were introduced in binary settings in Daraganova, G., & Robins, G. (2013).
 #' @param fix_z_alocal (logical) If `TRUE`, edges outside the overlap region
-#'   are fixed, else they are random (default).
+#'   are fixed, else they are random (default is `FALSE`).
 #' @param return_neighborhood Logical. If `TRUE` (default) and
 #'   `neighborhood` is `NULL`, a full neighborhood (all dyads) is
 #'   generated implying global dependence. If `FALSE`, no neighborhood is set.
@@ -2518,7 +2557,7 @@ iglm.data_generator <- R6::R6Class("iglm.data",
 #' tmp_adjacency$mean_z()
 #' @export
 iglm.data <- function(x_attribute = NULL, y_attribute = NULL, z_network = NULL,
-                      neighborhood = NULL, directed = TRUE, n_units = NA,
+                      neighborhood = NULL, directed = NA, n_units = NA,
                       family_x = "binomial", family_y = "binomial",
                       scale_x = 1, scale_y = 1,
                       fix_x = FALSE,
@@ -2539,8 +2578,8 @@ iglm.data <- function(x_attribute = NULL, y_attribute = NULL, z_network = NULL,
   }
 
   iglm.data_generator$new(
-    x_attribute = as.numeric(x_attribute),
-    y_attribute = as.numeric(y_attribute),
+    x_attribute = if (is.null(x_attribute)) NULL else as.numeric(x_attribute),
+    y_attribute = if (is.null(y_attribute)) NULL else as.numeric(y_attribute),
     z_network = z_network,
     neighborhood = neighborhood,
     directed = as.logical(directed),

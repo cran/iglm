@@ -3,7 +3,6 @@
 // Protect signatures using an inclusion guard.
 #ifndef network_class_H
 #define network_class_H
-#define DARMA_USE_CURRENT
 #include <RcppArmadillo.h>
 #include <vector>
 #include <algorithm>

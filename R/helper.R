@@ -32,10 +32,9 @@ get_rank <- function(new_vals, ref_data) {
 update_formula_remove_terms <- function(formula, terms_to_remove) {
   rhs_terms <- attr(terms(formula), "term.labels")
   rhs_terms_updated <- rhs_terms[!rhs_terms %in% terms_to_remove]
-  new_formula <- as.formula(paste(
-    deparse(formula[[2]]), "~",
-    paste(rhs_terms_updated, collapse = " + ")
-  ))
+  rhs_str <- if (length(rhs_terms_updated) == 0) "0" else paste(rhs_terms_updated, collapse = " + ")
+  lhs_str <- paste(deparse(formula[[2]]), collapse = " ")
+  new_formula <- as.formula(paste(lhs_str, "~", rhs_str))
   environment(new_formula) <- environment(formula)
   new_formula
 }
@@ -92,7 +91,7 @@ rhs_terms_as_list <- function(formula, env = NULL, evaluate_calls = FALSE) {
     env <- environment(formula)
     if (is.null(env)) env <- parent.frame()
   }
-  rhs_expr <- formula[[3L]]
+  rhs_expr <- if (length(formula) == 2L) formula[[2L]] else formula[[3L]]
   terms_exprs <- .split_plus(rhs_expr)
 
   out <- list()
@@ -106,10 +105,12 @@ rhs_terms_as_list <- function(formula, env = NULL, evaluate_calls = FALSE) {
       }
       taken_names <- c(taken_names, base_name)
 
-      out[[base_name]] <- list(
+      entry <- list(
         label = .deparse1(term_expr),
         base_name = base_name
       )
+      attr(entry, "term_type") <- "symbol"
+      out[[base_name]] <- entry
     } else if (is.call(term_expr)) {
       fun_sym <- term_expr[[1L]]
       base_name <- if (is.symbol(fun_sym)) as.character(fun_sym) else .deparse1(fun_sym)
@@ -163,6 +164,7 @@ rhs_terms_as_list <- function(formula, env = NULL, evaluate_calls = FALSE) {
         list(base_name = base_name)
       )
       if (!is.null(evaluated)) entry$.evaluated <- evaluated
+      attr(entry, "term_type") <- "call"
 
       # For the elt_name (key in the output list), we still want the full name
       # but we MUST NOT change base_name in the entry list
@@ -197,11 +199,21 @@ print.iglm.formulainfo <- function(x, ..., max_items = 5) {
 
   for (nm in names(x)) {
     term <- x[[nm]]
+    ttype <- attr(term, "term_type")
+    if (is.null(ttype)) {
+      ttype <- if (!is.null(term$type) && term$type %in% c("symbol", "call")) {
+        term$type
+      } else if (identical(term$label, term$base_name)) {
+        "symbol"
+      } else {
+        "call"
+      }
+    }
 
-    cat("$", nm, " (", term$type, ")\n", sep = "")
+    cat("$", nm, " (", ttype, ")\n", sep = "")
     cat("  label: ", term$label, "\n", sep = "")
 
-    if (term$type == "symbol") {
+    if (ttype == "symbol") {
       # show value class or small preview
       val <- term$value
       if (is.null(val)) {
@@ -215,9 +227,9 @@ print.iglm.formulainfo <- function(x, ..., max_items = 5) {
           sep = ""
         )
       }
-    } else if (term$type == "call") {
+    } else if (ttype == "call") {
       # show each argument entry
-      arg_names <- setdiff(names(term), c("name", "type", "label", ".evaluated"))
+      arg_names <- setdiff(names(term), c("name", "label", "base_name", ".evaluated"))
       if (length(arg_names) == 0L) {
         cat("  (no arguments)\n\n")
       } else {
@@ -293,9 +305,14 @@ XYZ_to_R <- function(x_attribute, y_attribute, z_network, n_units, return_adj_ma
 }
 
 check_overlap <- function(mat_1, mat_2) {
-  colnames(mat_1) <- colnames(mat_2)
-  combined <- rbind(mat_1, mat_2)
-  return(duplicated(combined, fromLast = TRUE)[seq_len(nrow(mat_1))])
+  if (nrow(mat_1) == 0 || nrow(mat_2) == 0) {
+    return(rep(FALSE, nrow(mat_1)))
+  }
+  max_col2 <- max(mat_1[, 2], mat_2[, 2])
+  mult <- as.double(max_col2) + 1.0
+  keys_1 <- as.double(mat_1[, 1]) * mult + as.double(mat_1[, 2])
+  keys_2 <- as.double(mat_2[, 1]) * mult + as.double(mat_2[, 2])
+  keys_1 %in% keys_2
 }
 
 iglm.data.neighborhood <- function(neighborhood, directed = NA, n_units = NA) {
@@ -303,7 +320,7 @@ iglm.data.neighborhood <- function(neighborhood, directed = NA, n_units = NA) {
     if (length(neighborhood) == 0) {
       neighborhood <- matrix(numeric(0), nrow = 0, ncol = 2)
     } else {
-      stop("`neighborhood` must be a matrix or data frame.", call. = FALSE)
+      stop("'neighborhood' must be a matrix or data frame.", call. = FALSE)
     }
   }
 
@@ -319,42 +336,43 @@ iglm.data.neighborhood <- function(neighborhood, directed = NA, n_units = NA) {
     return(res)
   }
   if (is.na(n_units)) {
-    if (ncol(neighborhood) > 2) {
+    is_adj_nb <- (is.matrix(neighborhood) || inherits(neighborhood, "Matrix") || is.data.frame(neighborhood)) &&
+      nrow(neighborhood) == ncol(neighborhood) &&
+      (ncol(neighborhood) > 2 || any(neighborhood == 0) || all(neighborhood == 1))
+    if (is_adj_nb) {
       n_units <- nrow(neighborhood)
     } else {
       n_units <- max(neighborhood)
     }
   }
   if (is.na(n_units)) {
-    stop("n_units could not be inferred. Please provide n_units.")
+    stop("'n_units' could not be inferred. Please provide 'n_units'.")
   }
-  if (ncol(neighborhood) == 2) {
-    sp_nb <- spMatrix(
-      nrow = n_units, ncol = n_units,
-      i = neighborhood[, 1], j = neighborhood[, 2], x = rep(1, length(neighborhood[, 2]))
-    )
-    sp_nb_trans <- sparseMatrix(i = sp_nb@j + 1, j = sp_nb@i + 1, dims = sp_nb@Dim)
 
-    overlap <- sp_nb %*% sp_nb_trans
-    overlap <- as(overlap, "TsparseMatrix")
-    overlap <- cbind(
-      overlap@i + 1,
-      overlap@j + 1
-    )
-    overlap <- overlap[overlap[, 1] != overlap[, 2], ]
+  is_adj <- (ncol(neighborhood) > 2) || (nrow(neighborhood) == n_units && ncol(neighborhood) == n_units && (n_units > 2 || any(neighborhood == 0) || all(neighborhood == 1)))
+
+  if (is_adj) {
+    if (!is.na(directed) && !directed) {
+      neighborhood <- pmax(neighborhood, t(neighborhood))
+    }
+    neighborhood <- which(neighborhood > 0, arr.ind = TRUE)
   } else {
-    positions <- which(neighborhood == 1, arr.ind = T)
-    sp_nb <- spMatrix(
-      nrow = ncol(neighborhood), ncol = ncol(neighborhood),
-      i = positions[, 1], j = positions[, 2], x = rep(1, length(positions[, 2]))
-    )
-    sp_nb_trans <- sparseMatrix(i = sp_nb@j + 1, j = sp_nb@i + 1, dims = sp_nb@Dim)
-
-    overlap <- as.matrix(sp_nb %*% sp_nb_trans > 0)
-    diag(overlap) <- 0
-    overlap <- which(overlap == 1, arr.ind = T)
-    neighborhood <- which(neighborhood == 1, arr.ind = T)
+    if (!is.na(directed) && !directed) {
+      neighborhood <- rbind(neighborhood, neighborhood[, c(2, 1)])
+    }
+    neighborhood <- neighborhood[!duplicated(neighborhood), , drop = FALSE]
   }
+
+  # Calculate overlap: off-diagonal entries with shared neighbors (N %*% t(N) > 0)
+  sp_nb <- sparseMatrix(
+    i = neighborhood[, 1], j = neighborhood[, 2], x = 1,
+    dims = c(n_units, n_units)
+  )
+  overlap_mat <- as(sp_nb %*% Matrix::t(sp_nb), "TsparseMatrix")
+  overlap <- cbind(overlap_mat@i + 1L, overlap_mat@j + 1L)
+  overlap <- overlap[overlap[, 1] != overlap[, 2], , drop = FALSE]
+  overlap <- overlap[!duplicated(overlap), , drop = FALSE]
+
   res <- list(
     neighborhood = neighborhood,
     overlap = overlap
@@ -363,27 +381,22 @@ iglm.data.neighborhood <- function(neighborhood, directed = NA, n_units = NA) {
   return(res)
 }
 
-get_i <- function(x, i) {
-  stopifnot(is.list(x), length(i) == 1L, is.numeric(i), i >= 1L)
-  k <- 1L
-  for (el in x) {
-    if (k == i) {
-      return(el)
-    }
-    k <- k + 1L
-  }
-  stop("subscript out of bounds")
-}
-
 #' @export
 #' @method [[ iglm.data.list
 `[[.iglm.data.list` <- function(x, i, ...) {
-  item <- get_i(x, i)
-  # browser()
-  item$set_neighborhood_overlap(
-    attr(x, "neighborhood")$neighborhood,
-    attr(x, "neighborhood")$overlap
-  )
+  if (missing(i) || length(i) != 1L) {
+    stop("subscript out of bounds")
+  }
+  item <- unclass(x)[[i]]
+  nb <- attr(x, "neighborhood")
+  if (!is.null(nb) && !is.null(item) && inherits(item, "iglm.data")) {
+    if (nrow(item$neighborhood) == 0) {
+      item$set_neighborhood_overlap(
+        nb$neighborhood,
+        nb$overlap
+      )
+    }
+  }
   item
 }
 
@@ -396,20 +409,10 @@ append_iglm.data <- function(x, y) {
 #' @export
 #' @method [ iglm.data.list
 `[.iglm.data.list` <- function(x, i, ...) {
-  # browser()
-  res <- list()
-  k <- 1
-  for (j in i) {
-    item <- get_i(x, j)
-    item$set_neighborhood_overlap(
-      attr(x, "neighborhood")$neighborhood,
-      attr(x, "neighborhood")$overlap
-    )
-    res[[k]] <- item
-    names(res)[k] <- j
-    k <- k + 1
-  }
-  res
+  sub <- if (missing(i)) unclass(x) else unclass(x)[i]
+  class(sub) <- "iglm.data.list"
+  attr(sub, "neighborhood") <- attr(x, "neighborhood")
+  sub
 }
 
 #' @export
@@ -418,7 +421,7 @@ print.iglm.data.list <- function(x, ...) {
   # Header
   n_items <- length(x)
   cat(
-    "List of iglm.data object with", n_items,
+    "List of iglm.data objects with", n_items,
     if (n_items == 1L) "entry\n" else "entries\n"
   )
 
@@ -457,7 +460,7 @@ formula_preprocess <- function(formula) {
     error = function(e) {
       stop(
         sprintf(
-          "The LHS of the formula ('%s') could not be found.\nUnlike standard glm where the response is a column name from a data frame (e.g., 'y ~ ...'), iglm requires an 'iglm.data' object on the LHS.\nWrap your attributes and network into an 'iglm.data' object first:\n  dat <- iglm.data(y_attribute = ..., x_attribute = ..., z_network = ...)\nand specify 'dat ~ ...'.",
+          "LHS of formula ('%s') could not be found.\n'iglm()' requires an 'iglm.data' object on the LHS (e.g., 'iglm(dat ~ ...)').",
           lhs_name
         ),
         call. = FALSE
@@ -468,7 +471,7 @@ formula_preprocess <- function(formula) {
   if (!inherits(data_object, "iglm.data")) {
     stop(
       sprintf(
-        "The LHS of the formula ('%s') is of class '%s', but iglm requires an 'iglm.data' object.\nUnlike standard glm where the response is a vector or column (e.g., 'y ~ x'), iglm models regression under network interference across an entire connected population.\nWrap your attributes and network into an 'iglm.data' object first:\n  dat <- iglm.data(y_attribute = %s, ...)\nand call:\n  fit <- iglm(dat ~ attribute_y() + spillover_yx() + edges())",
+        "LHS of formula ('%s') is of class '%s', but must be an 'iglm.data' object.\nCreate one with 'dat <- iglm.data(y_attribute = %s, ...)' and specify 'dat ~ ...'.",
         lhs_name,
         class(data_object)[1],
         lhs_name
@@ -478,6 +481,9 @@ formula_preprocess <- function(formula) {
   }
 
   includes_degrees <- "degrees" %in% all.vars(formula)
+  if (includes_degrees && data_object$n_units < 3) {
+    stop("The 'degrees' term requires at least 3 units for identification.", call. = FALSE)
+  }
   formula <- stats::update(formula, . ~ . - degrees)
   formula_info <- rhs_terms_as_list(formula)
   if (length(formula_info) == 0 && !includes_degrees) {
@@ -646,7 +652,7 @@ extract_assessment_matrix <- function(sim_list, metric, subkey = NULL) {
 
 #' @noRd
 plot_assessment_multi <- function(observed, sim_main, sim_dots = list(),
-                                  model_names, colors, xlab, ylab = "Percentage",
+                                  model_names, colors, xlab, ylab = "Proportion",
                                   x_at = NULL, x_labels = NULL, x_positions = NULL,
                                   x_margin = 0.3, lwd_mean = 2, use_envelope = FALSE) {
   all_sims <- c(list(sim_main), sim_dots)
@@ -660,8 +666,14 @@ plot_assessment_multi <- function(observed, sim_main, sim_dots = list(),
       seq_along(observed)
     }
     xlim <- c(min(x) - x_margin, max(x) + x_margin)
+    if (any(!is.finite(xlim))) xlim <- c(0, 1)
+    if (diff(xlim) == 0) xlim <- c(xlim[1] - 0.5, xlim[2] + 0.5)
     all_vals <- c(as.numeric(observed), unlist(all_sims))
     ylim <- range(all_vals, na.rm = TRUE)
+    if (any(!is.finite(ylim))) ylim <- c(0, 1)
+    if (diff(ylim) == 0) {
+      ylim <- if (ylim[1] == 0) c(0, 1) else c(ylim[1] - 0.5, ylim[2] + 0.5)
+    }
 
     plot(x, as.vector(observed),
          type = "n", xlab = xlab, ylab = ylab,
@@ -754,8 +766,14 @@ plot_assessment_multi <- function(observed, sim_main, sim_dots = list(),
   }
   
   xlim <- c(min(x) - x_margin, max(x) + x_margin)
+  if (any(!is.finite(xlim))) xlim <- c(0, 1)
+  if (diff(xlim) == 0) xlim <- c(xlim[1] - 0.5, xlim[2] + 0.5)
   all_vals <- c(as.numeric(observed), unlist(all_sims))
   ylim <- range(all_vals, na.rm = TRUE)
+  if (any(!is.finite(ylim))) ylim <- c(0, 1)
+  if (diff(ylim) == 0) {
+    ylim <- if (ylim[1] == 0) c(0, 1) else c(ylim[1] - 0.5, ylim[2] + 0.5)
+  }
   
   plot(x, as.vector(observed),
        type = "n", xlab = xlab, ylab = ylab,
@@ -803,10 +821,13 @@ plot_assessment_multi <- function(observed, sim_main, sim_dots = list(),
 }
 
 #' @noRd
-plot_assessment_single <- function(observed, sim_matrix, xlab, ylab = "Percentage",
+plot_assessment_single <- function(observed, sim_matrix, xlab, ylab = "Proportion",
                                    box_col = "#87CEEB80", line_col = "#D55E00",
                                    x_at = NULL, x_labels = NULL, x_positions = NULL,
-                                   x_margin = 0.3, use_envelope = FALSE) {
+                                   x_margin = 0.3, use_envelope = FALSE,
+                                   plot_bds = TRUE, bds_col = "gray75",
+                                   outline = FALSE, pch_bds = 1, cex_bds = 0.75,
+                                   lwd_bds = 1, lty_bds = 1, ...) {
   if (use_envelope) {
     x <- if (!is.null(x_positions)) {
       as.numeric(x_positions)
@@ -816,7 +837,13 @@ plot_assessment_single <- function(observed, sim_matrix, xlab, ylab = "Percentag
       seq_along(observed)
     }
     xlim <- c(min(x) - x_margin, max(x) + x_margin)
+    if (any(!is.finite(xlim))) xlim <- c(0, 1)
+    if (diff(xlim) == 0) xlim <- c(xlim[1] - 0.5, xlim[2] + 0.5)
     ylim <- range(c(sim_matrix, as.numeric(observed)), na.rm = TRUE)
+    if (any(!is.finite(ylim))) ylim <- c(0, 1)
+    if (diff(ylim) == 0) {
+      ylim <- if (ylim[1] == 0) c(0, 1) else c(ylim[1] - 0.5, ylim[2] + 0.5)
+    }
 
     plot(x, as.vector(observed),
          type = "n", xlab = xlab, ylab = ylab,
@@ -888,7 +915,13 @@ plot_assessment_single <- function(observed, sim_matrix, xlab, ylab = "Percentag
   }
   
   xlim <- c(min(x) - x_margin, max(x) + x_margin)
+  if (any(!is.finite(xlim))) xlim <- c(0, 1)
+  if (diff(xlim) == 0) xlim <- c(xlim[1] - 0.5, xlim[2] + 0.5)
   ylim <- range(c(sim_matrix, as.numeric(observed)), na.rm = TRUE)
+  if (any(!is.finite(ylim))) ylim <- c(0, 1)
+  if (diff(ylim) == 0) {
+    ylim <- if (ylim[1] == 0) c(0, 1) else c(ylim[1] - 0.5, ylim[2] + 0.5)
+  }
   
   # 1. Initialize plot (axes = FALSE suppresses default axes and box)
   plot(x, as.vector(observed),
@@ -921,10 +954,23 @@ plot_assessment_single <- function(observed, sim_matrix, xlab, ylab = "Percentag
   box(bty = "l", lwd = 1)
   
   # 4. Plot data layers
-  boxplot(sim_matrix,
+  graphics::boxplot(sim_matrix,
           at = x, boxwex = 0.5,
-          add = TRUE, col = box_col, axes = FALSE, las = 1
+          add = TRUE, col = box_col, axes = FALSE, las = 1,
+          outline = outline
   )
+
+  # Draw 95% simulation bounds at the ends of boxplots matching ergm GOF
+  if (isTRUE(plot_bds) && length(sim_matrix) > 0) {
+    sim_mat <- as.matrix(sim_matrix)
+    if (nrow(sim_mat) > 0 && ncol(sim_mat) == length(x)) {
+      bds <- apply(sim_mat, 2, stats::quantile, probs = c(0.025, 0.975), na.rm = TRUE)
+      graphics::points(x, bds[1, ], pch = pch_bds, cex = cex_bds)
+      graphics::points(x, bds[2, ], pch = pch_bds, cex = cex_bds)
+      graphics::lines(x, bds[1, ], col = bds_col, lwd = lwd_bds, lty = lty_bds)
+      graphics::lines(x, bds[2, ], col = bds_col, lwd = lwd_bds, lty = lty_bds)
+    }
+  }
   
   lines(x, as.vector(observed), type = "l", col = line_col, lwd = 2)
 }
@@ -1162,19 +1208,17 @@ check_glm_arguments <- function(args) {
   if (!is.null(arg_names)) {
     if ("data" %in% arg_names) {
       stop(
-        "iglm does not accept a 'data' argument in the standard glm sense.\n",
-        "Attributes (x, y) and network adjacency (z) must be bundled into an 'iglm.data' object ",
-        "and passed as the response on the LHS of the formula: iglm(my_iglm_data ~ ...).\n",
-        "Use `iglm.data(...)` to construct your data container first.",
+        "'data' is not an argument to 'iglm()'.\n",
+        "Bundle attributes and network adjacency into an 'iglm.data' object and pass it on the LHS: 'iglm(dat ~ ...)'. ",
+        "Use 'iglm.data(...)' to construct the data container.",
         call. = FALSE
       )
     }
 
     if ("family" %in% arg_names) {
       stop(
-        "'family' is not an argument to iglm().\n",
-        "The distributional family is defined when creating the 'iglm.data' object ",
-        "via 'family_y' and 'family_x' (e.g., iglm.data(..., family_y = 'binomial', family_x = 'normal')).",
+        "'family' is not an argument to 'iglm()'.\n",
+        "Specify families when creating the data object: 'iglm.data(..., family_y = ..., family_x = ...)'. ",
         call. = FALSE
       )
     }
@@ -1184,7 +1228,7 @@ check_glm_arguments <- function(args) {
     if (length(named_extra) > 0) {
       stop(
         sprintf(
-          "Unrecognized argument(s) passed to iglm(): %s.",
+          "Unrecognized argument(s) passed to 'iglm()': %s.",
           paste(paste0("'", named_extra, "'"), collapse = ", ")
         ),
         call. = FALSE
@@ -1193,6 +1237,6 @@ check_glm_arguments <- function(args) {
   }
 
   # Unnamed positional arguments
-  stop("Unrecognized positional argument(s) passed to iglm().", call. = FALSE)
+  stop("Unrecognized positional argument(s) passed to 'iglm()'.", call. = FALSE)
 }
 

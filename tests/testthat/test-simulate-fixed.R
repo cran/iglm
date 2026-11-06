@@ -531,39 +531,39 @@ test_that("simulate_iglm validates fix_x and fix_z overrides", {
   # Invalid fix_x
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_x = NA),
-    pattern = "'fix_x' must be a single non-missing logical value"
+    regexp = "'fix_x' must be a single non-missing logical value"
   )
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_x = c(TRUE, FALSE)),
-    pattern = "'fix_x' must be a single non-missing logical value"
+    regexp = "'fix_x' must be a single non-missing logical value"
   )
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_x = "TRUE"),
-    pattern = "'fix_x' must be a single non-missing logical value"
+    regexp = "'fix_x' must be a single non-missing logical value"
   )
 
   # Invalid fix_z
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_z = NA),
-    pattern = "'fix_z' must be a single non-missing logical value"
+    regexp = "'fix_z' must be a single non-missing logical value"
   )
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_z = c(TRUE, FALSE)),
-    pattern = "'fix_z' must be a single non-missing logical value"
+    regexp = "'fix_z' must be a single non-missing logical value"
   )
   expect_error(
     simulate_iglm(data_obj ~ edges(mode = "local") + attribute_y, coef = c(-1, 0.5), fix_z = "TRUE"),
-    pattern = "'fix_z' must be a single non-missing logical value"
+    regexp = "'fix_z' must be a single non-missing logical value"
   )
 
   # iglm.data rejects NA for fix_x and fix_z
   expect_error(
     iglm.data(neighborhood = neighborhood, directed = FALSE, fix_x = NA),
-    pattern = "'fix_x' must be a single logical value"
+    regexp = "'fix_x' must be a single logical value"
   )
   expect_error(
     iglm.data(neighborhood = neighborhood, directed = FALSE, fix_z = NA),
-    pattern = "'fix_z' must be a single logical value"
+    regexp = "'fix_z' must be a single logical value"
   )
 })
 
@@ -617,6 +617,79 @@ test_that("simulate_iglm throws an error when coef length does not match formula
     regexp = "Wrong number of coefficients for the wanted terms."
   )
 })
+
+test_that("simulation does not trigger partial match warnings", {
+  n_units <- 10
+  neighborhood <- matrix(1, nrow = n_units, ncol = n_units)
+  xyz_obj <- iglm.data(neighborhood = neighborhood, directed = FALSE, family_x = "binomial", family_y = "binomial")
+
+  old_opt <- options(warnPartialMatchDollar = TRUE)
+  on.exit(options(old_opt), add = TRUE)
+
+  model_fit <- iglm(
+    formula = xyz_obj ~ edges(mode = "local"),
+    coef = 0.5,
+    sampler = sampler.iglm(n_burn_in = 1, n_simulation = 2, init_empty = FALSE),
+    control = control.iglm(accelerated = FALSE, max_it = 1, display_progress = FALSE)
+  )
+  expect_no_warning(model_fit$simulate(display_progress = FALSE))
+  expect_equal(length(model_fit$get_samples()), 2)
+})
+
+test_that("simulate_iglm validates coef_degrees when degrees are included", {
+  dat <- iglm.data(z_network = matrix(0, 3, 3), n_units = 3, directed = FALSE)
+  # Missing coef_degrees
+  expect_error(
+    simulate_iglm(dat ~ edges() + degrees, coef = 0),
+    regexp = "'coef_degrees' was not provided"
+  )
+  # Non-numeric coef_degrees
+  expect_error(
+    simulate_iglm(dat ~ edges() + degrees, coef = 0, coef_degrees = c("a", "b", "c")),
+    regexp = "'coef_degrees' must be a numeric vector"
+  )
+  # Wrong length
+  expect_error(
+    simulate_iglm(dat ~ edges() + degrees, coef = 0, coef_degrees = c(0, 0)),
+    regexp = "'coef_degrees' must have length 3"
+  )
+})
+
+test_that("simulate_iglm with -Inf in coef_degrees maintains degree 0 for that unit", {
+  dat <- iglm.data(z_network = matrix(0, 4, 4), n_units = 4, directed = FALSE)
+  # Unit 4 has degree coefficient -Inf
+  coef_deg <- c(0, 0, 0, -Inf)
+  sim_res <- simulate_iglm(
+    dat ~ edges() + degrees,
+    coef = 0.5,
+    coef_degrees = coef_deg,
+    only_stats = FALSE,
+    sampler = sampler.iglm(n_burn_in = 2, n_simulation = 3, init_empty = FALSE)
+  )
+  expect_equal(length(sim_res$samples), 3)
+  for (s in sim_res$samples) {
+    expect_equal(s$degree()$degree_seq[4], 0)
+  }
+})
+
+test_that("simulate_iglm preserves fix_x and fix_z overrides in returned samples", {
+  dat <- iglm.data(z_network = matrix(0, 4, 4), n_units = 4, directed = FALSE, fix_x = FALSE, fix_z = FALSE)
+  sim_res <- simulate_iglm(
+    dat ~ edges(),
+    coef = 0.5,
+    fix_x = TRUE,
+    fix_z = TRUE,
+    only_stats = FALSE,
+    sampler = sampler.iglm(n_burn_in = 2, n_simulation = 2, init_empty = FALSE)
+  )
+  expect_equal(length(sim_res$samples), 2)
+  for (s in sim_res$samples) {
+    expect_true(s$fix_x)
+    expect_true(s$fix_z)
+  }
+})
+
+
 
 
 

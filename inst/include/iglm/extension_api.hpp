@@ -21,7 +21,7 @@
 #ifdef IGLM_COMPILING_IGLM
 #define IGLM_API __declspec(dllexport)
 #else
-#define IGLM_API __declspec(dllimport)
+#define IGLM_API
 #endif
 #else
 // On Linux/macOS, we need to ensure symbols are visible even if loaded with R_LD_LOCAL

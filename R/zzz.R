@@ -53,7 +53,7 @@ add_alpha <- function(color_code, alpha_level) {
 #' at the specified location.
 #' As an example for a possible statistic, the statistic counting mutual
 #' connections in the network is implemented.
-#' After defining all possible change-statistics in the c++ function (this has to include a change for
+#' After defining all possible change-statistics in the C++ function (this has to include a change for
 #' \code{z_ij} (network), \code{x_i} (attribute x), and \code{y_i} (attribute y) all toggling from 0 to 1),
 #' the function has to be registered using the \code{EFFECT_REGISTER} macro.
 #' After compiling the package,
@@ -105,14 +105,14 @@ create_userterms_skeleton <- function(path = ".", pkg_name = "iglm.userterms") {
   )
 
   zzz_content <- c(
-    paste("#' @useDynLib", pkg_name, ", .registration=TRUE"),
+    paste0("#' @useDynLib ", pkg_name, ", .registration=TRUE"),
     "#' @import iglm",
     "#' @importFrom Rcpp evalCpp",
     "NULL",
     "",
     "#' @export",
     "InitIglmTerm.my_mutual <- function(data_object, arglist, ...) {",
-    "  arglist <- iglm:::check.IglmTerm(data_object, arglist,",
+    "  arglist <- iglm::check.IglmTerm(data_object, arglist,",
     "                                  directed = TRUE,",
     "                                  expected = list(mode = \"local\"),",
     "                                  defaults = list(mode = \"local\"))",
@@ -124,7 +124,7 @@ create_userterms_skeleton <- function(path = ".", pkg_name = "iglm.userterms") {
     "",
     "#' @export",
     "InitIglmTerm.my_spillover <- function(data_object, arglist, ...) {",
-    "  arglist <- iglm:::check.IglmTerm(data_object, arglist,",
+    "  arglist <- iglm::check.IglmTerm(data_object, arglist,",
     "                                   directed = FALSE,",
     "                                   expected = list(mode = \"local\"),",
     "                                   defaults = list(mode = \"local\"))",
@@ -138,9 +138,7 @@ create_userterms_skeleton <- function(path = ".", pkg_name = "iglm.userterms") {
   # --- src/Makevars  ---
   makevars_content <- c(
     "PKG_CPPFLAGS = -DARMA_64BIT_WORD",
-    "IGLM_LIB_PATH = $(shell \"${R_HOME}/bin/Rscript\" -e \"cat(file.path(system.file(package='iglm'), 'libs'))\")",
-    "IGLM_SO_PATH = $(shell \"${R_HOME}/bin/Rscript\" -e \"cat(file.path(system.file(package = 'iglm'), 'libs',paste0('iglm.so')))\")",
-    "PKG_LIBS = $(IGLM_SO_PATH) -Wl,-rpath,$(IGLM_LIB_PATH) -lR $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)"
+    "PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)"
   )
 
   cpp_content <- c(
@@ -202,6 +200,7 @@ create_userterms_skeleton <- function(path = ".", pkg_name = "iglm.userterms") {
   writeLines(ns_content, file.path(pkg_path, "NAMESPACE"))
   writeLines(zzz_content, file.path(pkg_path, "R", "zzz.R"))
   writeLines(makevars_content, file.path(pkg_path, "src", "Makevars"))
+  writeLines(makevars_content, file.path(pkg_path, "src", "Makevars.win"))
   writeLines(cpp_content, file.path(pkg_path, "src", "additional_cc.cpp"))
 
   message(paste0("Package skeleton ", pkg_name, " created at:", normalizePath(pkg_path)))

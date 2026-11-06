@@ -1,5 +1,4 @@
 ## ----include = FALSE----------------------------------------------------------
-options(rmarkdown.html_vignette.check_title = FALSE)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -11,21 +10,10 @@ library(iglm)
 
 ## -----------------------------------------------------------------------------
 n_units <- 100
-
-attribute_info <- rnorm(n_units)
-attribute_cov <- diag(attribute_info)
-edge_cov <- outer(attribute_info, attribute_info, FUN = function(x, y) {
-  abs(x - y)
-})
 set.seed(123)
-
-alpha <- 0.3
-block <- matrix(nrow = 50, ncol = 50, data = 1)
-neighborhood <- as.matrix(Matrix::bdiag(replicate(n_units / 50, block, simplify = FALSE)))
 
 overlapping_degree <- 0.5
 neighborhood <- matrix(nrow = n_units, ncol = n_units, data = 0)
-block <- matrix(nrow = 5, ncol = 5, data = 0)
 size_neighborhood <- 5
 size_overlap <- ceiling(size_neighborhood * overlapping_degree)
 

@@ -78,11 +78,11 @@ copenhagen$deg(
 
     \item{\code{fix_x}}{(`logical`) Indicates if the `x_attribute` is fixed during estimation/simulation.}
 
-    \item{\code{fix_z}}{(`logical`) RIndicates if the `z_network` is fixed during estimation/simulation.}
+    \item{\code{fix_z}}{(`logical`) Indicates if the `z_network` is fixed during estimation/simulation.}
 
-    \item{\code{descriptives}}{(`list`)A list storing computed descriptive statistics for the network and attributes.}
+    \item{\code{descriptives}}{(`list`) A list storing computed descriptive statistics for the network and attributes.}
 
-    \item{\code{fix_z_alocal}}{(`logical`) Flag indicating whether nonoverlap edges are treated as random.}
+    \item{\code{fix_z_alocal}}{(`logical`) Flag indicating whether nonoverlap (alocal) edges are treated as fixed.}
   }
   \if{html}{\out{</div>}}
 }
@@ -157,7 +157,7 @@ copenhagen$deg(
   scale_y = 1,
   fix_x = FALSE,
   fix_z = FALSE,
-  fix_z_alocal = TRUE,
+  fix_z_alocal = FALSE,
   return_neighborhood = TRUE,
   file = NULL,
   label_x = "x",
@@ -198,7 +198,8 @@ for "normal" type). Default is 1.}
 during model estimation and simulation. Default is `FALSE`.}
       \item{\code{fix_z}}{Logical. If `TRUE`, the `z_network` is treated as fixed
 during model estimation and simulation. Default is `FALSE`.}
-      \item{\code{fix_z_alocal}}{Logical. If `TRUE` (default), alocal dyads in the neighborhood are fixed.}
+      \item{\code{fix_z_alocal}}{Logical. If `TRUE`, edges outside the overlap region
+(alocal dyads) are fixed. Default is `FALSE`.}
       \item{\code{return_neighborhood}}{Logical. If `TRUE` (default) and
 `neighborhood` is `NULL`, a full neighborhood (all dyads) is
 generated implying global dependence. If `FALSE`, no neighborhood is set.}
@@ -615,7 +616,7 @@ details necessary to reconstruct the object later.
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{value_range}}{(numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.}
-      \item{\code{prob}}{(logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns proportions; if `FALSE`, returns counts.}
       \item{\code{plot}}{(logical) If `TRUE` (default), plots the distribution using a density plot for continuous data or a bar plot for discrete data.}
     }
     \if{html}{\out{</div>}}
@@ -663,7 +664,7 @@ details necessary to reconstruct the object later.
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{value_range}}{(numeric vector) Optional range of values to consider for the distribution. If `NULL` (default), the range is inferred from the data.}
-      \item{\code{prob}}{(logical) If `TRUE` (default), returns probabilities; if `FALSE`, returns frequencies.}
+      \item{\code{prob}}{(logical) If `TRUE` (default), returns proportions; if `FALSE`, returns counts.}
       \item{\code{plot}}{(logical) If `TRUE` (default), plots the distribution using a density plot for continuous data or a bar plot for discrete data.}
     }
     \if{html}{\out{</div>}}
